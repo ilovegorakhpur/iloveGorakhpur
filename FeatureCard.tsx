@@ -1,5 +1,5 @@
 import React from 'react';
-import type { FeatureCardProps } from '../types';
+import type { FeatureCardProps } from './types';
 
 const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description }) => {
   return (

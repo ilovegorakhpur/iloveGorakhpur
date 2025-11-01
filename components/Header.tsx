@@ -11,13 +11,29 @@ const Header: React.FC = () => {
   const navLinks = [
     { href: '#features', label: 'Features' },
     { href: '#marketplace', label: 'Marketplace' },
+    { href: '#news', label: 'News'},
     { href: '#itinerary-planner', label: 'Itinerary Planner' },
     { href: '#services', label: 'Services' },
     { href: '#community', label: 'Community' },
     { href: '#ai-assistant', label: 'AI Assistant' },
   ];
 
-  const handleMobileMenuAction = () => {
+  const handleScroll = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    const element = document.querySelector(href);
+    if (element) {
+      const headerOffset = 80; // Approximate height of the sticky header
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth',
+      });
+    }
+  };
+
+  const handleMobileMenuAction = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    handleScroll(e, href);
     setIsMobileMenuOpen(false);
   };
 
@@ -32,7 +48,12 @@ const Header: React.FC = () => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-4">
             {navLinks.map((link) => (
-              <a key={link.href} href={link.href} className="text-gray-600 hover:text-orange-600 transition-colors">
+              <a 
+                key={link.href} 
+                href={link.href} 
+                onClick={(e) => handleScroll(e, link.href)}
+                className="text-gray-600 hover:text-orange-600 transition-colors"
+              >
                 {link.label}
               </a>
             ))}
@@ -115,7 +136,7 @@ const Header: React.FC = () => {
                   <a
                     key={link.href}
                     href={link.href}
-                    onClick={handleMobileMenuAction}
+                    onClick={(e) => handleMobileMenuAction(e, link.href)}
                     className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-orange-600 hover:bg-gray-50"
                   >
                     {link.label}
@@ -142,7 +163,7 @@ const Header: React.FC = () => {
                     <button
                         onClick={() => {
                           logout();
-                          handleMobileMenuAction();
+                          setIsMobileMenuOpen(false);
                         }}
                         className="w-full text-left flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-orange-600 hover:bg-gray-50"
                       >
@@ -154,13 +175,13 @@ const Header: React.FC = () => {
               ) : (
                 <div className="px-2 space-y-2">
                   <button
-                    onClick={() => { openAuthModal('login'); handleMobileMenuAction(); }}
+                    onClick={() => { openAuthModal('login'); setIsMobileMenuOpen(false); }}
                     className="w-full text-center block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-orange-600 hover:bg-gray-50"
                   >
                     Login
                   </button>
                   <button
-                    onClick={() => { openAuthModal('register'); handleMobileMenuAction(); }}
+                    onClick={() => { openAuthModal('register'); setIsMobileMenuOpen(false); }}
                     className="w-full text-center block px-3 py-2 rounded-md text-base font-medium text-white bg-orange-500 hover:bg-orange-600"
                   >
                     Sign Up
@@ -170,8 +191,8 @@ const Header: React.FC = () => {
             </div>
             <div className="py-3 border-t border-gray-200">
                 <div className="px-2 space-y-1">
-                    <a href="#" onClick={handleMobileMenuAction} className="block px-3 py-2 rounded-md text-sm text-gray-500 hover:text-orange-600 hover:bg-gray-50">Terms of Service</a>
-                    <a href="#" onClick={handleMobileMenuAction} className="block px-3 py-2 rounded-md text-sm text-gray-500 hover:text-orange-600 hover:bg-gray-50">Privacy Policy</a>
+                    <a href="#" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 rounded-md text-sm text-gray-500 hover:text-orange-600 hover:bg-gray-50">Terms of Service</a>
+                    <a href="#" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 rounded-md text-sm text-gray-500 hover:text-orange-600 hover:bg-gray-50">Privacy Policy</a>
                 </div>
             </div>
         </div>

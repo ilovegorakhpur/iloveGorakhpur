@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { GoogleIcon, XIcon, EyeIcon, EyeOffIcon, LoadingIcon } from './icons';
@@ -76,7 +77,7 @@ const AuthModal: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLoginView && (
               <div>
-                <label htmlFor="name" className="text-sm font-medium text-gray-700 sr-only">Name</label>
+                <label htmlFor="name" className="sr-only">Full Name</label>
                 <input
                   id="name"
                   name="name"
@@ -91,7 +92,7 @@ const AuthModal: React.FC = () => {
               </div>
             )}
             <div>
-              <label htmlFor="email" className="text-sm font-medium text-gray-700 sr-only">Email address</label>
+              <label htmlFor="email" className="sr-only">Email address</label>
               <input
                 id="email"
                 name="email"
@@ -105,7 +106,7 @@ const AuthModal: React.FC = () => {
               />
             </div>
             <div>
-              <label htmlFor="password"  className="text-sm font-medium text-gray-700 sr-only">Password</label>
+              <label htmlFor="password"  className="sr-only">Password</label>
               <div className="relative">
                 <input
                   id="password"

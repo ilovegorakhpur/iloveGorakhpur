@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Post } from '../types';
 import { CommunityIcon, ShareIcon } from './icons';
 import { useAuth } from '../context/AuthContext';
+import { shareContent } from '../utils/share';
 
 const initialPosts: Post[] = [
   {
@@ -26,30 +27,22 @@ const CommunityBulletin: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [newPostTitle, setNewPostTitle] = useState('');
   const [newPostContent, setNewPostContent] = useState('');
+  const [shareStatus, setShareStatus] = useState('');
+  
+  useEffect(() => {
+    if (shareStatus) {
+        const timer = setTimeout(() => setShareStatus(''), 3000);
+        return () => clearTimeout(timer);
+    }
+  }, [shareStatus]);
 
   const handleShare = async (post: Post) => {
-    const shareData = {
+    const status = await shareContent({
       title: post.title,
       text: post.content,
       url: window.location.href + '#community',
-    };
-
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch (err) {
-        console.error('Error sharing post:', err);
-      }
-    } else {
-      const shareText = `${shareData.title}\n\n${shareData.text}\n\nJoin the conversation at: ${shareData.url}`;
-      try {
-          await navigator.clipboard.writeText(shareText);
-          alert('Post details copied to clipboard!');
-      } catch (err) {
-          console.error('Failed to copy post details: ', err);
-          alert('Sharing is not available on this browser.');
-      }
-    }
+    });
+    setShareStatus(status);
   };
 
   const handlePostSubmit = (e: React.FormEvent) => {
@@ -163,6 +156,7 @@ const CommunityBulletin: React.FC = () => {
             ))}
           </div>
         </div>
+        {shareStatus && <div className="fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm">{shareStatus}</div>}
       </div>
     </section>
   );

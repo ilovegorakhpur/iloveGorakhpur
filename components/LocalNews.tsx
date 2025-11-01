@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Article } from '../types';
 import { NewspaperIcon, SummarizeIcon, ShareIcon } from './icons';
 import { summarizeText } from '../services/geminiService';
+import { shareContent } from '../utils/share';
 
 const mockArticles: Article[] = [
   {
@@ -28,33 +29,18 @@ const mockArticles: Article[] = [
   },
 ];
 
-const ArticleCard: React.FC<{ article: Article }> = ({ article }) => {
+const ArticleCard: React.FC<{ article: Article, setShareStatus: (status: string) => void }> = ({ article, setShareStatus }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [summary, setSummary] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const handleShare = async () => {
-        const shareData = {
+        const status = await shareContent({
             title: article.title,
             text: article.snippet,
-            url: window.location.href, // Using current page URL as a placeholder
-        };
-        if (navigator.share) {
-            try {
-                await navigator.share(shareData);
-            } catch (err) {
-                console.error('Error sharing article:', err);
-            }
-        } else {
-            const shareText = `${shareData.title}\n${shareData.text}\nRead more: ${shareData.url}`;
-            try {
-                await navigator.clipboard.writeText(shareText);
-                alert('Article details copied to clipboard!');
-            } catch (err) {
-                console.error('Failed to copy article details: ', err);
-                alert('Sharing is not available on your browser.');
-            }
-        }
+            url: window.location.href + '#news',
+        });
+        setShareStatus(status);
     };
 
     const handleSummarize = async () => {
@@ -122,6 +108,15 @@ const ArticleCard: React.FC<{ article: Article }> = ({ article }) => {
 };
 
 const LocalNews: React.FC = () => {
+  const [shareStatus, setShareStatus] = useState('');
+
+  useEffect(() => {
+    if (shareStatus) {
+        const timer = setTimeout(() => setShareStatus(''), 3000);
+        return () => clearTimeout(timer);
+    }
+  }, [shareStatus]);
+
   return (
     <section id="news" className="py-16 sm:py-24 bg-gray-50">
       <div className="container mx-auto px-4">
@@ -135,9 +130,10 @@ const LocalNews: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {mockArticles.map(article => (
-            <ArticleCard key={article.id} article={article} />
+            <ArticleCard key={article.id} article={article} setShareStatus={setShareStatus} />
           ))}
         </div>
+        {shareStatus && <div className="fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm">{shareStatus}</div>}
       </div>
     </section>
   );
