@@ -28,8 +28,9 @@ export interface Post {
   id: number;
   author: string; // Keep it simple as string, from User.name
   timestamp: string;
-  title: string;
   content: string;
+  title: string;
+  creatorId?: string;
 }
 
 // New types for Itinerary Planner
@@ -86,6 +87,14 @@ export interface LocalEvent {
   creatorId?: string;
 }
 
+export interface Review {
+  id: number;
+  author: string;
+  rating: number;
+  comment: string;
+  timestamp: string;
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -95,6 +104,7 @@ export interface Product {
   category: string;
   creatorId?: string;
   description?: string;
+  reviews?: Review[];
 }
 
 export interface CartItem extends Product {

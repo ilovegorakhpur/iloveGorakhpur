@@ -1,30 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import type { Post } from '../types';
 import { CommunityIcon, ShareIcon } from './icons';
 import { useAuth } from '../context/AuthContext';
+import { useContent } from '../context/ContentContext';
 import { shareContent } from '../utils/share';
-
-const initialPosts: Post[] = [
-  {
-    id: 1,
-    author: 'Rohan Gupta',
-    timestamp: '2 hours ago',
-    title: 'Looking for a reliable plumber in Golghar area',
-    content: 'Hi everyone, my kitchen sink is leaking and I need a good plumber urgently. Any recommendations in the Golghar area would be a great help. Thanks!',
-  },
-  {
-    id: 2,
-    author: 'Priya Sharma',
-    timestamp: '1 day ago',
-    title: 'Weekend Farmer\'s Market at City Mall',
-    content: 'Just a reminder that the weekly farmer\'s market is happening this Saturday from 9 AM to 1 PM in the City Mall parking lot. Come get some fresh, local produce!',
-  },
-];
 
 const CommunityBulletin: React.FC = () => {
   const { user, openAuthModal } = useAuth();
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const { posts, setPosts } = useContent();
   const [newPostTitle, setNewPostTitle] = useState('');
   const [newPostContent, setNewPostContent] = useState('');
   const [shareStatus, setShareStatus] = useState('');
@@ -52,12 +35,13 @@ const CommunityBulletin: React.FC = () => {
     const newPost: Post = {
       id: Date.now(),
       author: user.name,
+      creatorId: user.id,
       timestamp: 'Just now',
       title: newPostTitle,
       content: newPostContent,
     };
 
-    setPosts([newPost, ...posts]);
+    setPosts(prevPosts => [newPost, ...prevPosts]);
     setNewPostTitle('');
     setNewPostContent('');
   };

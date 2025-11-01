@@ -14,9 +14,10 @@ import { NewspaperIcon, ServicesIcon, ShoppingCartIcon } from './components/icon
 import LocalServices from './components/LocalServices';
 import LocalNews from './components/LocalNews';
 import Marketplace from './components/Marketplace';
+import ProfilePage from './components/ProfilePage';
 
 const App: React.FC = () => {
-  const { isAuthModalOpen } = useAuth();
+  const { user, isAuthModalOpen } = useAuth();
   const { isCartOpen } = useCart();
   
   const features = [
@@ -63,6 +64,7 @@ const App: React.FC = () => {
           </div>
         </section>
         <Marketplace />
+        {user && <ProfilePage />}
         <LocalNews />
         <ItineraryPlanner />
         <LocalServices />

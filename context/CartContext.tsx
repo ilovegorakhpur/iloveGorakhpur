@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, ReactNode, useMemo } from 'react';
 import type { Product, CartItem } from '../types';
+import usePersistentState from '../hooks/usePersistentState';
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -11,12 +12,13 @@ interface CartContextType {
   closeCart: () => void;
   cartItemCount: number;
   cartTotal: number;
+  clearCart: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartItems, setCartItems] = usePersistentState<CartItem[]>('cartItems', []);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
   const addToCart = (product: Product) => {
@@ -46,6 +48,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       );
     }
   };
+
+  const clearCart = () => {
+    setCartItems([]);
+  }
   
   const openCart = () => setIsCartOpen(true);
   const closeCart = () => setIsCartOpen(false);
@@ -67,7 +73,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     openCart,
     closeCart,
     cartItemCount,
-    cartTotal
+    cartTotal,
+    clearCart
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

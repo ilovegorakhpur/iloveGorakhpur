@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import type { User } from '../types';
+import usePersistentState from '../hooks/usePersistentState';
 
 type AuthModalView = 'login' | 'register';
 
@@ -21,7 +22,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = usePersistentState<User | null>('user', null);
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalView, setAuthModalView] = useState<AuthModalView>('login');
