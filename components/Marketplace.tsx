@@ -12,9 +12,9 @@ const initialMockEvents: LocalEvent[] = [
 ];
 
 const initialMockProducts: Product[] = [
-    { id: 1, name: 'Handmade Terracotta Horse', seller: 'Shilpi Crafts', price: 1200, imageUrl: 'https://picsum.photos/400/400?random=20', category: 'Handicrafts', creatorId: '67890' }, // Editable by mock user
-    { id: 2, name: 'Gorakhpuri Spices Combo', seller: 'Masala Junction', price: 450, imageUrl: 'https://picsum.photos/400/400?random=21', category: 'Food', creatorId: '99999' },
-    { id: 3, name: 'Pure Local Honey (500g)', seller: 'Purvanchal Farms', price: 350, imageUrl: 'https://picsum.photos/400/400?random=22', category: 'Food', creatorId: '99999' },
+    { id: 1, name: 'Handmade Terracotta Horse', seller: 'Shilpi Crafts', price: 1200, imageUrl: 'https://picsum.photos/400/400?random=20', category: 'Handicrafts', creatorId: '67890', description: 'A beautiful, handcrafted terracotta horse, a symbol of Gorakhpur\'s rich artistic heritage. Perfect for home decor or as a unique gift.' }, // Editable by mock user
+    { id: 2, name: 'Gorakhpuri Spices Combo', seller: 'Masala Junction', price: 450, imageUrl: 'https://picsum.photos/400/400?random=21', category: 'Food', creatorId: '99999', description: 'An authentic blend of local spices to bring the taste of Gorakhpur to your kitchen.' },
+    { id: 3, name: 'Pure Local Honey (500g)', seller: 'Purvanchal Farms', price: 350, imageUrl: 'https://picsum.photos/400/400?random=22', category: 'Food', creatorId: '99999', description: '100% pure and natural honey sourced from local farms in the Purvanchal region.' },
 ];
 
 
@@ -37,7 +37,7 @@ const Marketplace: React.FC = () => {
     const [products, setProducts] = useState<Product[]>(initialMockProducts);
     const [showProductForm, setShowProductForm] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-    const [productForm, setProductForm] = useState({ name: '', price: '', category: '' });
+    const [productForm, setProductForm] = useState({ name: '', price: '', category: '', description: '' });
     const [productImageFile, setProductImageFile] = useState<File | null>(null);
     const [productImagePreview, setProductImagePreview] = useState<string | null>(null);
 
@@ -146,7 +146,7 @@ const Marketplace: React.FC = () => {
         );
     }, [searchTerm, products]);
     
-    const handleProductFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setProductForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const handleProductFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setProductForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
     
     const handleProductImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -158,7 +158,7 @@ const Marketplace: React.FC = () => {
 
     const handleShowProductForm = () => {
         setEditingProduct(null);
-        setProductForm({ name: '', price: '', category: '' });
+        setProductForm({ name: '', price: '', category: '', description: '' });
         setProductImageFile(null);
         setProductImagePreview(null);
         setShowProductForm(true);
@@ -170,6 +170,7 @@ const Marketplace: React.FC = () => {
             name: product.name,
             price: String(product.price),
             category: product.category,
+            description: product.description || '',
         });
         setProductImagePreview(product.imageUrl);
         setShowProductForm(true);
@@ -185,6 +186,7 @@ const Marketplace: React.FC = () => {
                 ...productForm,
                 price: Number(productForm.price),
                 imageUrl: productImagePreview || editingProduct.imageUrl,
+                description: productForm.description || undefined,
             };
             setProducts(products.map(p => p.id === editingProduct.id ? updatedProduct : p));
         } else {
@@ -195,6 +197,7 @@ const Marketplace: React.FC = () => {
                 price: Number(productForm.price),
                 imageUrl: productImagePreview || `https://picsum.photos/400/400?random=${Date.now()}`,
                 creatorId: user.id,
+                description: productForm.description || undefined,
             };
             setProducts([newProductData, ...products]);
         }
@@ -228,6 +231,9 @@ const Marketplace: React.FC = () => {
                         <input name="name" value={formState.name} onChange={handleChange} placeholder="Product Name" className="w-full px-4 py-2 rounded-md border border-gray-300" required />
                         <input name="category" value={formState.category} onChange={handleChange} placeholder="Category (e.g., Handicrafts)" className="w-full px-4 py-2 rounded-md border border-gray-300" required />
                         <input name="price" value={formState.price} onChange={handleChange} type="number" placeholder="Price" className="w-full px-4 py-2 rounded-md border border-gray-300" required />
+                         <div className="sm:col-span-2">
+                            <textarea name="description" value={formState.description} onChange={handleChange} placeholder="Product Description" rows={3} className="w-full px-4 py-2 rounded-md border border-gray-300" />
+                        </div>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
