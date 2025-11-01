@@ -12,17 +12,48 @@ const mockServices: ServiceListing[] = [
   { id: 6, name: 'Reliable Electricians', category: 'Electricians', description: 'Commercial and residential electrical solutions.', phone: '9876543215', rating: 4.5, isVerified: false },
 ];
 
-const categories = ['All', 'Plumbers', 'Electricians', 'Tutors', 'Carpenters', 'Appliance Repair'];
-
 const LocalServices: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showVerifiedOnly, setShowVerifiedOnly] = useState(false);
+  const [sortBy, setSortBy] = useState('rating'); // 'rating' or 'name'
 
-  const filteredServices = useMemo(() => {
-    return mockServices
-      .filter(service => selectedCategory === 'All' || service.category === selectedCategory)
-      .filter(service => service.name.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [selectedCategory, searchTerm]);
+  const categories = useMemo(() => {
+    const allCategories = mockServices.map(s => s.category);
+    return ['All', ...Array.from(new Set(allCategories))];
+  }, []);
+
+  const processedServices = useMemo(() => {
+    let services = [...mockServices];
+
+    // Filter by Verified
+    if (showVerifiedOnly) {
+      services = services.filter(service => service.isVerified);
+    }
+    
+    // Filter by Category
+    if (selectedCategory !== 'All') {
+      services = services.filter(service => service.category === selectedCategory);
+    }
+
+    // Filter by Search Term (in name and description)
+    if (searchTerm.trim()) {
+      const lowercasedTerm = searchTerm.toLowerCase();
+      services = services.filter(service => 
+        service.name.toLowerCase().includes(lowercasedTerm) ||
+        service.description.toLowerCase().includes(lowercasedTerm)
+      );
+    }
+
+    // Sort
+    if (sortBy === 'rating') {
+      services.sort((a, b) => b.rating - a.rating);
+    } else if (sortBy === 'name') {
+      services.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return services;
+  }, [selectedCategory, searchTerm, showVerifiedOnly, sortBy]);
 
   return (
     <section id="services" className="py-16 sm:py-24 bg-gray-50">
@@ -35,22 +66,41 @@ const LocalServices: React.FC = () => {
           <p className="mt-4 text-lg text-gray-600">Find trusted professionals for your everyday needs.</p>
         </div>
 
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           {/* Filters and Search */}
-          <div className="bg-white p-4 rounded-xl shadow-md mb-8 sticky top-20 z-30 flex flex-col sm:flex-row gap-4 items-center">
-             <div className="relative w-full sm:w-1/2">
-                <input
-                    type="text"
-                    placeholder="Search for a service..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 text-gray-700 bg-gray-100 rounded-md border border-gray-200 focus:border-orange-500 focus:ring-orange-500 focus:outline-none transition-colors"
-                />
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          <div className="bg-white p-4 rounded-xl shadow-md mb-8 sticky top-20 z-30">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="relative lg:col-span-1">
+                    <input
+                        type="text"
+                        placeholder="Search services or keywords..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 text-gray-700 bg-gray-100 rounded-lg border-2 border-transparent focus:border-orange-500 focus:ring-orange-500 focus:outline-none transition-colors"
+                    />
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    </div>
+                </div>
+                <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex items-center bg-gray-100 p-2 rounded-lg">
+                        <label htmlFor="sort-by" className="text-sm font-medium text-gray-600 mr-2 whitespace-nowrap">Sort by:</label>
+                        <select id="sort-by" value={sortBy} onChange={e => setSortBy(e.target.value)} className="w-full bg-white px-3 py-2 text-sm rounded-md border border-gray-200 focus:border-orange-500 focus:ring-orange-500 focus:outline-none">
+                            <option value="rating">Highest Rating</option>
+                            <option value="name">Name (A-Z)</option>
+                        </select>
+                    </div>
+                    <label htmlFor="verified-toggle" className="flex items-center justify-center cursor-pointer select-none bg-gray-100 p-2 rounded-lg">
+                        <span className="text-sm font-medium text-gray-600 mr-3">Verified Only</span>
+                        <div className="relative">
+                        <input type="checkbox" id="verified-toggle" className="sr-only" checked={showVerifiedOnly} onChange={e => setShowVerifiedOnly(e.target.checked)} />
+                        <div className={`block w-14 h-8 rounded-full transition-colors ${showVerifiedOnly ? 'bg-orange-500' : 'bg-gray-300'}`}></div>
+                        <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full shadow-sm transition-transform ${showVerifiedOnly ? 'translate-x-full' : ''}`}></div>
+                        </div>
+                    </label>
                 </div>
             </div>
-            <div className="flex-grow overflow-x-auto pb-2">
+            <div className="mt-4 flex-grow overflow-x-auto pb-2">
                 <div className="flex space-x-2">
                     {categories.map(category => (
                     <button
@@ -58,7 +108,7 @@ const LocalServices: React.FC = () => {
                         onClick={() => setSelectedCategory(category)}
                         className={`px-4 py-2 text-sm font-medium rounded-full transition-colors whitespace-nowrap ${
                         selectedCategory === category
-                            ? 'bg-orange-500 text-white'
+                            ? 'bg-orange-500 text-white shadow-sm'
                             : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                         }`}
                     >
@@ -71,7 +121,7 @@ const LocalServices: React.FC = () => {
 
           {/* Service Listings */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredServices.map(service => (
+            {processedServices.map(service => (
               <div key={service.id} className="bg-white p-6 rounded-xl shadow-md transition-shadow duration-300 hover:shadow-lg flex flex-col">
                 <div className="flex-grow">
                   <div className="flex items-start justify-between mb-2">
@@ -97,9 +147,10 @@ const LocalServices: React.FC = () => {
                 </div>
               </div>
             ))}
-            {filteredServices.length === 0 && (
-                <div className="md:col-span-2 text-center py-10">
-                    <p className="text-gray-600">No services found matching your criteria.</p>
+            {processedServices.length === 0 && (
+                <div className="md:col-span-2 text-center py-10 bg-white rounded-xl shadow-md">
+                    <h3 className="text-lg font-semibold text-gray-800">No Services Found</h3>
+                    <p className="text-gray-600 mt-2">Try adjusting your search or filters to find what you're looking for.</p>
                 </div>
             )}
           </div>

@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import type { Post } from '../types';
-import { CommunityIcon } from './icons';
+import { CommunityIcon, ShareIcon } from './icons';
 import { useAuth } from '../context/AuthContext';
 
 const initialPosts: Post[] = [
@@ -25,6 +26,31 @@ const CommunityBulletin: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [newPostTitle, setNewPostTitle] = useState('');
   const [newPostContent, setNewPostContent] = useState('');
+
+  const handleShare = async (post: Post) => {
+    const shareData = {
+      title: post.title,
+      text: post.content,
+      url: window.location.href + '#community',
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.error('Error sharing post:', err);
+      }
+    } else {
+      const shareText = `${shareData.title}\n\n${shareData.text}\n\nJoin the conversation at: ${shareData.url}`;
+      try {
+          await navigator.clipboard.writeText(shareText);
+          alert('Post details copied to clipboard!');
+      } catch (err) {
+          console.error('Failed to copy post details: ', err);
+          alert('Sharing is not available on this browser.');
+      }
+    }
+  };
 
   const handlePostSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,6 +149,16 @@ const CommunityBulletin: React.FC = () => {
                 </div>
                 <h4 className="text-xl font-bold text-gray-800 mb-3">{post.title}</h4>
                 <p className="text-gray-600 whitespace-pre-wrap">{post.content}</p>
+                <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-end">
+                    <button 
+                        onClick={() => handleShare(post)}
+                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-orange-600 font-medium transition-colors"
+                        aria-label="Share post"
+                    >
+                        <ShareIcon className="h-4 w-4" />
+                        <span>Share</span>
+                    </button>
+                </div>
               </div>
             ))}
           </div>
