@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { UserCircleIcon, LogoutIcon, MenuIcon, XIcon } from './icons';
 
@@ -7,6 +7,7 @@ const Header: React.FC = () => {
   const { user, logout, openAuthModal } = useAuth();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
   const navLinks = [
     { href: '#features', label: 'Features' },
@@ -17,6 +18,23 @@ const Header: React.FC = () => {
     { href: '#community', label: 'Community' },
     { href: '#ai-assistant', label: 'AI Assistant' },
   ];
+
+  // Effect to close profile menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    if (isProfileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProfileMenuOpen]);
 
   const handleScroll = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
@@ -66,7 +84,7 @@ const Header: React.FC = () => {
             {/* Desktop Auth Section */}
             <div className="hidden md:flex items-center space-x-2">
               {user ? (
-                <div className="relative">
+                <div className="relative" ref={profileMenuRef}>
                   <button onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)} className="focus:outline-none">
                     {user.avatarUrl ? (
                       <img src={user.avatarUrl} alt={user.name} className="h-10 w-10 rounded-full border-2 border-orange-500" />

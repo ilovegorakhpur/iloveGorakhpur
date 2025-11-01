@@ -82,6 +82,8 @@ export interface LocalEvent {
   price: number;
   imageUrl: string;
   category: string;
+  duration?: string;
+  recurring?: string;
 }
 
 export interface Product {

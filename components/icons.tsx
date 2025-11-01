@@ -173,3 +173,15 @@ export const EyeOffIcon: React.FC = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a10.05 10.05 0 013.454-5.232m12.138 5.232c.429 1.25.65 2.56.65 3.932 0 1.293-.198 2.536-.56 3.697m-1.5-4.243a3 3 0 11-4.243-4.243m4.243 4.243l-4.243-4.243m0 0a3 3 0 10-4.243 4.243m4.243-4.243L6.125 6.125M3.932 8.56C5.207 4.507 8.998 2 13.476 2c1.669 0 3.26.44 4.654 1.241m-2.223 2.223a3 3 0 014.242 4.242" />
   </svg>
 );
+
+export const ClockIcon: React.FC<{className?: string}> = ({className = "h-4 w-4 mr-1"}) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
+
+export const RefreshIcon: React.FC<{className?: string}> = ({className = "h-4 w-4 mr-1"}) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M4 4l1.5 1.5A9 9 0 0120.5 11M20 20l-1.5-1.5A9 9 0 003.5 13" />
+    </svg>
+);

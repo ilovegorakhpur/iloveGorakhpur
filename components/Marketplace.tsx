@@ -1,14 +1,14 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import type { LocalEvent, Product } from '../types';
-import { ShoppingCartIcon, TicketIcon, ShareIcon, PlusIcon } from './icons';
+import { ShoppingCartIcon, TicketIcon, ShareIcon, PlusIcon, ClockIcon, RefreshIcon } from './icons';
 import { useAuth } from '../context/AuthContext';
 import { shareContent } from '../utils/share';
 
 const initialMockEvents: LocalEvent[] = [
-  { id: 1, title: 'Live Music Night at The Brew House', date: 'Sat, Aug 24, 8:00 PM', location: 'The Brew House, Golghar', price: 499, imageUrl: 'https://picsum.photos/400/250?random=10', category: 'Music' },
-  { id: 2, title: 'Gorakhpur Terracotta Workshop', date: 'Sun, Aug 25, 11:00 AM', location: 'Craft Village, Taramandal', price: 250, imageUrl: 'https://picsum.photos/400/250?random=11', category: 'Workshop' },
-  { id: 3, title: 'Sunday Stand-up Comedy', date: 'Sun, Aug 25, 7:00 PM', location: 'Central Perk Cafe', price: 300, imageUrl: 'https://picsum.photos/400/250?random=12', category: 'Comedy' },
+  { id: 1, title: 'Live Music Night at The Brew House', date: 'Sat, Aug 24, 8:00 PM', location: 'The Brew House, Golghar', price: 499, imageUrl: 'https://picsum.photos/400/250?random=10', category: 'Music', duration: '3 hours' },
+  { id: 2, title: 'Gorakhpur Terracotta Workshop', date: 'Sun, Aug 25, 11:00 AM', location: 'Craft Village, Taramandal', price: 250, imageUrl: 'https://picsum.photos/400/250?random=11', category: 'Workshop', duration: '4 hours', recurring: 'Weekly' },
+  { id: 3, title: 'Sunday Stand-up Comedy', date: 'Sun, Aug 25, 7:00 PM', location: 'Central Perk Cafe', price: 300, imageUrl: 'https://picsum.photos/400/250?random=12', category: 'Comedy', duration: '2 hours' },
 ];
 
 const mockProducts: Product[] = [
@@ -24,6 +24,7 @@ const Marketplace: React.FC = () => {
     const [events, setEvents] = useState<LocalEvent[]>(initialMockEvents);
     const [shareStatus, setShareStatus] = useState('');
     const [showCreateForm, setShowCreateForm] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState('All');
 
     // Form state for new event
     const [newEvent, setNewEvent] = useState({
@@ -32,6 +33,8 @@ const Marketplace: React.FC = () => {
         location: '',
         price: '',
         category: '',
+        duration: '',
+        recurring: 'None',
     });
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -39,6 +42,7 @@ const Marketplace: React.FC = () => {
     const handleTabChange = (tab: 'events' | 'products') => {
         setActiveTab(tab);
         setSearchTerm(''); // Clear search on tab switch
+        setSelectedCategory('All'); // Clear category filter
         setShowCreateForm(false); // Hide form on tab switch
     };
     
@@ -49,12 +53,20 @@ const Marketplace: React.FC = () => {
         }
     }, [shareStatus]);
 
+    const eventCategories = useMemo(() => {
+        const categories = new Set(events.map(event => event.category));
+        return ['All', ...Array.from(categories)];
+    }, [events]);
+
     const filteredEvents = useMemo(() => {
-        return events.filter(event =>
-            event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            event.category.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [searchTerm, events]);
+        const lowercasedTerm = searchTerm.toLowerCase();
+        return events.filter(event => {
+            const categoryMatch = selectedCategory === 'All' || event.category === selectedCategory;
+            const searchMatch = event.title.toLowerCase().includes(lowercasedTerm) ||
+                                event.category.toLowerCase().includes(lowercasedTerm);
+            return categoryMatch && searchMatch;
+        });
+    }, [searchTerm, events, selectedCategory]);
 
     const filteredProducts = useMemo(() => {
         return mockProducts.filter(product =>
@@ -74,9 +86,18 @@ const Marketplace: React.FC = () => {
           url: window.location.href + '#marketplace',
         });
         setShareStatus(status);
-      };
+    };
 
-    const handleFormInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleShareProduct = async (product: Product) => {
+        const status = await shareContent({
+          title: product.name,
+          text: `Check out this local product from Gorakhpur: ${product.name} by ${product.seller}.`,
+          url: window.location.href + '#marketplace',
+        });
+        setShareStatus(status);
+    };
+
+    const handleFormInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setNewEvent(prev => ({ ...prev, [name]: value }));
     };
@@ -100,11 +121,13 @@ const Marketplace: React.FC = () => {
             price: Number(newEvent.price),
             category: newEvent.category,
             imageUrl: imagePreview || `https://picsum.photos/400/250?random=${Date.now()}`,
+            duration: newEvent.duration,
+            recurring: newEvent.recurring === 'None' ? undefined : newEvent.recurring,
         };
         setEvents([newEventData, ...events]);
 
         // Reset form
-        setNewEvent({ title: '', date: '', location: '', price: '', category: '' });
+        setNewEvent({ title: '', date: '', location: '', price: '', category: '', duration: '', recurring: 'None' });
         setImageFile(null);
         setImagePreview(null);
         setShowCreateForm(false);
@@ -139,7 +162,7 @@ const Marketplace: React.FC = () => {
                     </div>
 
                     {/* Search and Create Controls */}
-                    <div className="mb-8 max-w-lg mx-auto flex flex-col items-center gap-4">
+                    <div className="mb-4 max-w-lg mx-auto flex flex-col items-center gap-4">
                         <div className="relative w-full">
                             <input
                                 type="text"
@@ -167,6 +190,25 @@ const Marketplace: React.FC = () => {
                         )}
                     </div>
                     
+                     {/* Category Filters */}
+                    {activeTab === 'events' && (
+                    <div className="mb-8 flex flex-wrap justify-center gap-2">
+                        {eventCategories.map(category => (
+                            <button
+                                key={category}
+                                onClick={() => setSelectedCategory(category)}
+                                className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${
+                                selectedCategory === category
+                                    ? 'bg-orange-500 text-white shadow-sm'
+                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                }`}
+                            >
+                                {category}
+                            </button>
+                        ))}
+                    </div>
+                    )}
+
                     {/* Create Event Form */}
                     {showCreateForm && user && (
                         <div className="max-w-2xl mx-auto bg-gray-50 p-6 rounded-xl shadow-md mb-8 border border-gray-200">
@@ -178,6 +220,13 @@ const Marketplace: React.FC = () => {
                                     <input name="date" value={newEvent.date} onChange={handleFormInputChange} placeholder="Date & Time" className="w-full px-4 py-2 rounded-md border border-gray-300" required />
                                     <input name="location" value={newEvent.location} onChange={handleFormInputChange} placeholder="Location" className="w-full px-4 py-2 rounded-md border border-gray-300" required />
                                     <input name="price" value={newEvent.price} onChange={handleFormInputChange} type="number" placeholder="Price (0 for free)" className="w-full px-4 py-2 rounded-md border border-gray-300" required />
+                                    <input name="duration" value={newEvent.duration} onChange={handleFormInputChange} placeholder="Duration (e.g., 2 hours)" className="w-full px-4 py-2 rounded-md border border-gray-300" />
+                                    <select name="recurring" value={newEvent.recurring} onChange={handleFormInputChange} className="w-full px-4 py-2 rounded-md border border-gray-300 text-gray-700 bg-white">
+                                        <option value="None">One-time Event</option>
+                                        <option value="Daily">Repeats Daily</option>
+                                        <option value="Weekly">Repeats Weekly</option>
+                                        <option value="Monthly">Repeats Monthly</option>
+                                    </select>
                                     <input type="file" onChange={handleImageChange} accept="image/*" className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100" />
                                 </div>
                                 {imagePreview && <img src={imagePreview} alt="Preview" className="mt-4 rounded-lg max-h-48 mx-auto" />}
@@ -201,7 +250,23 @@ const Marketplace: React.FC = () => {
                                             <p className="text-sm font-semibold text-orange-600 mb-1">{event.date}</p>
                                             <h3 className="text-lg font-bold text-gray-900 flex-grow">{event.title}</h3>
                                             <p className="text-sm text-gray-500 mt-1">{event.location}</p>
-                                            <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
+                                            
+                                            <div className="flex items-center text-xs text-gray-500 mt-2 space-x-4">
+                                                {event.duration && (
+                                                    <div className="flex items-center">
+                                                        <ClockIcon className="h-4 w-4 mr-1 text-gray-400" />
+                                                        <span>{event.duration}</span>
+                                                    </div>
+                                                )}
+                                                {event.recurring && (
+                                                    <div className="flex items-center">
+                                                        <RefreshIcon className="h-4 w-4 mr-1 text-gray-400" />
+                                                        <span>{event.recurring}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="mt-auto pt-4 border-t border-gray-100 flex justify-between items-center">
                                                 <button 
                                                     onClick={() => handleShareEvent(event)}
                                                     className="flex items-center gap-2 text-sm text-gray-600 hover:text-orange-600 font-medium transition-colors"
@@ -225,7 +290,7 @@ const Marketplace: React.FC = () => {
                         )}
                         {activeTab === 'events' && filteredEvents.length === 0 && (
                             <div className="text-center py-10">
-                                <p className="text-gray-600">No events found matching your search.</p>
+                                <p className="text-gray-600">No events found matching your search criteria.</p>
                             </div>
                         )}
 
@@ -241,9 +306,19 @@ const Marketplace: React.FC = () => {
                                             <h3 className="text-lg font-bold text-gray-900">{product.name}</h3>
                                             <p className="text-sm text-gray-500 mt-1 mb-3 flex-grow">by {product.seller}</p>
                                             <p className="text-xl font-bold text-gray-800 mb-4">₹{product.price}</p>
-                                            <button onClick={() => handleBuyClick(product.name)} className="w-full mt-auto px-4 py-2 bg-orange-500 text-white text-sm font-semibold rounded-md hover:bg-orange-600 transition-colors">
-                                                Add to Cart
-                                            </button>
+                                            <div className="mt-auto pt-4 border-t border-gray-100 flex justify-between items-center">
+                                                <button 
+                                                    onClick={() => handleShareProduct(product)}
+                                                    className="flex items-center gap-2 text-sm text-gray-600 hover:text-orange-600 font-medium transition-colors"
+                                                    aria-label="Share product"
+                                                >
+                                                    <ShareIcon className="h-4 w-4" />
+                                                    <span>Share</span>
+                                                </button>
+                                                <button onClick={() => handleBuyClick(product.name)} className="px-4 py-2 bg-orange-500 text-white text-sm font-semibold rounded-md hover:bg-orange-600 transition-colors">
+                                                    Add to Cart
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
