@@ -1,0 +1,8 @@
+{
+  "name": "iLoveGorakhpur",
+  "description": "A community application for the city of Gorakhpur, providing information about places, news, events, and an AI assistant to answer all your questions about the city.",
+  "requestFramePermissions": [
+    "geolocation",
+    "microphone"
+  ]
+}
