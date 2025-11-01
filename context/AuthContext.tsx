@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import type { User } from '../types';
 import usePersistentState from '../hooks/usePersistentState';
@@ -17,6 +18,7 @@ interface AuthContextType {
   closeAuthModal: () => void;
   switchToLogin: () => void;
   switchToRegister: () => void;
+  updateNotificationPreferences: (prefs: { newPosts: boolean; newEvents: boolean; }) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,7 +47,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           id: '12345',
           name: 'Chandra Prakash',
           email: 'chandra.prakash@example.com',
-          avatarUrl: `https://i.pravatar.cc/150?u=12345`
+          avatarUrl: `https://i.pravatar.cc/150?u=12345`,
+          notificationPreferences: {
+            newPosts: true,
+            newEvents: true,
+          }
         };
         setUser(mockUser);
         setIsLoading(false);
@@ -65,6 +71,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             id: '67890',
             name: 'Priya Sharma',
             email: 'test@example.com',
+            notificationPreferences: {
+                newPosts: true,
+                newEvents: false,
+            }
           };
           setUser(mockUser);
           setIsLoading(false);
@@ -87,6 +97,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           id: String(Date.now()),
           name: name,
           email: email,
+          notificationPreferences: {
+            newPosts: true,
+            newEvents: true,
+          }
         };
         setUser(mockUser);
         setIsLoading(false);
@@ -98,6 +112,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = () => {
     setUser(null);
+  };
+
+  const updateNotificationPreferences = (prefs: { newPosts: boolean; newEvents: boolean; }) => {
+    if (user) {
+        // This simulates updating the user's profile on a server.
+        // With usePersistentState, it will also save to localStorage.
+        setUser({ ...user, notificationPreferences: prefs });
+    }
   };
 
   const value = {
@@ -113,6 +135,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     closeAuthModal,
     switchToLogin,
     switchToRegister,
+    updateNotificationPreferences,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

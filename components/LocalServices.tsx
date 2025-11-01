@@ -2,17 +2,10 @@
 import React, { useState, useMemo } from 'react';
 import type { ServiceListing } from '../types';
 import { ServicesIcon, VerifiedIcon } from './icons';
-
-const mockServices: ServiceListing[] = [
-  { id: 1, name: 'Gupta Plumbing Services', category: 'Plumbers', description: '24/7 emergency plumbing and fitting services.', phone: '9876543210', rating: 4.8, isVerified: true },
-  { id: 2, name: 'Verma Electrical Works', category: 'Electricians', description: 'All types of house wiring and electrical repairs.', phone: '9876543211', rating: 4.9, isVerified: true },
-  { id: 3, name: 'Sharma Home Tutors', category: 'Tutors', description: 'Experienced tutors for all subjects, grades 1-12.', phone: '9876543212', rating: 4.7, isVerified: false },
-  { id: 4, name: 'City Carpenters', category: 'Carpenters', description: 'Custom furniture and home woodwork repairs.', phone: '9876543213', rating: 4.6, isVerified: true },
-  { id: 5, name: 'Gorakhpur AC Repair', category: 'Appliance Repair', description: 'Fast and reliable AC and refrigerator servicing.', phone: '9876543214', rating: 4.8, isVerified: false },
-  { id: 6, name: 'Reliable Electricians', category: 'Electricians', description: 'Commercial and residential electrical solutions.', phone: '9876543215', rating: 4.5, isVerified: false },
-];
+import { useContent } from '../context/ContentContext';
 
 const LocalServices: React.FC = () => {
+  const { services: mockServices } = useContent();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [showVerifiedOnly, setShowVerifiedOnly] = useState(false);
@@ -21,7 +14,7 @@ const LocalServices: React.FC = () => {
   const categories = useMemo(() => {
     const allCategories = mockServices.map(s => s.category);
     return ['All', ...Array.from(new Set(allCategories))];
-  }, []);
+  }, [mockServices]);
 
   const processedServices = useMemo(() => {
     let services = [...mockServices];
@@ -53,7 +46,7 @@ const LocalServices: React.FC = () => {
     }
 
     return services;
-  }, [selectedCategory, searchTerm, showVerifiedOnly, sortBy]);
+  }, [selectedCategory, searchTerm, showVerifiedOnly, sortBy, mockServices]);
 
   return (
     <section id="services" className="py-16 sm:py-24 bg-gray-50">

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import type { LocalEvent, Product, Post } from '../types';
+import type { LocalEvent, Product, Post, ServiceListing } from '../types';
 import usePersistentState from '../hooks/usePersistentState';
 
 // --- Initial Mock Data (used only if localStorage is empty) ---
@@ -25,6 +25,9 @@ const initialPosts: Post[] = [
     timestamp: '2 hours ago',
     title: 'Looking for a reliable plumber in Golghar area',
     content: 'Hi everyone, my kitchen sink is leaking and I need a good plumber urgently. Any recommendations in the Golghar area would be a great help. Thanks!',
+    category: 'Help Needed',
+    likes: [],
+    comments: [],
   },
   {
     id: 2,
@@ -33,7 +36,19 @@ const initialPosts: Post[] = [
     timestamp: '1 day ago',
     title: 'Weekend Farmer\'s Market at City Mall',
     content: 'Just a reminder that the weekly farmer\'s market is happening this Saturday from 9 AM to 1 PM in the City Mall parking lot. Come get some fresh, local produce!',
+    category: 'Announcements',
+    likes: [],
+    comments: [],
   },
+];
+
+const initialMockServices: ServiceListing[] = [
+  { id: 1, name: 'Gupta Plumbing Services', category: 'Plumbers', description: '24/7 emergency plumbing and fitting services.', phone: '9876543210', rating: 4.8, isVerified: true },
+  { id: 2, name: 'Verma Electrical Works', category: 'Electricians', description: 'All types of house wiring and electrical repairs.', phone: '9876543211', rating: 4.9, isVerified: true },
+  { id: 3, name: 'Sharma Home Tutors', category: 'Tutors', description: 'Experienced tutors for all subjects, grades 1-12.', phone: '9876543212', rating: 4.7, isVerified: false },
+  { id: 4, name: 'City Carpenters', category: 'Carpenters', description: 'Custom furniture and home woodwork repairs.', phone: '9876543213', rating: 4.6, isVerified: true },
+  { id: 5, name: 'Gorakhpur AC Repair', category: 'Appliance Repair', description: 'Fast and reliable AC and refrigerator servicing.', phone: '9876543214', rating: 4.8, isVerified: false },
+  { id: 6, name: 'Reliable Electricians', category: 'Electricians', description: 'Commercial and residential electrical solutions.', phone: '9876543215', rating: 4.5, isVerified: false },
 ];
 
 
@@ -46,6 +61,8 @@ interface ContentContextType {
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
   posts: Post[];
   setPosts: React.Dispatch<React.SetStateAction<Post[]>>;
+  services: ServiceListing[];
+  setServices: React.Dispatch<React.SetStateAction<ServiceListing[]>>;
 }
 
 const ContentContext = createContext<ContentContextType | undefined>(undefined);
@@ -54,6 +71,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [events, setEvents] = usePersistentState<LocalEvent[]>('events', initialMockEvents);
   const [products, setProducts] = usePersistentState<Product[]>('products', initialMockProducts);
   const [posts, setPosts] = usePersistentState<Post[]>('posts', initialPosts);
+  const [services, setServices] = usePersistentState<ServiceListing[]>('services', initialMockServices);
 
   const value = {
     events,
@@ -62,6 +80,8 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     setProducts,
     posts,
     setPosts,
+    services,
+    setServices,
   };
 
   return <ContentContext.Provider value={value}>{children}</ContentContext.Provider>;

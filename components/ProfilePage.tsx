@@ -1,10 +1,28 @@
+
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useContent } from '../context/ContentContext';
 import { TrashIcon, UserCircleIcon, TicketIcon, ShoppingCartIcon, NewspaperIcon } from './icons';
 
+const NotificationToggle: React.FC<{ label: string; description: string; enabled: boolean; onChange: (enabled: boolean) => void;}> = ({ label, description, enabled, onChange }) => (
+    <div className="flex items-center justify-between bg-white p-4 rounded-lg border border-gray-200">
+        <div>
+            <p className="font-semibold text-gray-800">{label}</p>
+            <p className="text-xs text-gray-500">{description}</p>
+        </div>
+        <label htmlFor={`toggle-${label}`} className="flex items-center cursor-pointer select-none">
+            <div className="relative">
+                <input type="checkbox" id={`toggle-${label}`} className="sr-only" checked={enabled} onChange={(e) => onChange(e.target.checked)} />
+                <div className={`block w-14 h-8 rounded-full transition-colors ${enabled ? 'bg-orange-500' : 'bg-gray-300'}`}></div>
+                <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full shadow-sm transition-transform ${enabled ? 'translate-x-full' : ''}`}></div>
+            </div>
+        </label>
+    </div>
+);
+
+
 const ProfilePage: React.FC = () => {
-    const { user } = useAuth();
+    const { user, updateNotificationPreferences } = useAuth();
     const { posts, setPosts, events, setEvents, products, setProducts } = useContent();
     const [activeTab, setActiveTab] = useState<'posts' | 'events' | 'products'>('posts');
 
@@ -31,6 +49,16 @@ const ProfilePage: React.FC = () => {
         }
     };
 
+    const handlePreferenceChange = (key: 'newPosts' | 'newEvents', value: boolean) => {
+        if (user && user.notificationPreferences) {
+            const newPrefs = {
+                ...user.notificationPreferences,
+                [key]: value,
+            };
+            updateNotificationPreferences(newPrefs);
+        }
+    };
+
     if (!user) {
         return null;
     }
@@ -50,9 +78,9 @@ const ProfilePage: React.FC = () => {
     return (
         <section id="profile" className="py-16 sm:py-24 bg-white">
             <div className="container mx-auto px-4">
-                <div className="max-w-4xl mx-auto">
+                <div className="max-w-4xl mx-auto space-y-12">
                     {/* Profile Header */}
-                    <div className="flex flex-col sm:flex-row items-center bg-gray-50 p-8 rounded-2xl shadow-sm mb-12 text-center sm:text-left">
+                    <div className="flex flex-col sm:flex-row items-center bg-gray-50 p-8 rounded-2xl shadow-sm text-center sm:text-left">
                         {user.avatarUrl ? (
                             <img src={user.avatarUrl} alt={user.name} className="h-24 w-24 rounded-full border-4 border-white shadow-md mb-4 sm:mb-0 sm:mr-6 flex-shrink-0" />
                         ) : (
@@ -63,6 +91,26 @@ const ProfilePage: React.FC = () => {
                         <div>
                             <h2 className="text-3xl font-bold text-gray-900">{user.name}</h2>
                             <p className="text-gray-600">{user.email}</p>
+                        </div>
+                    </div>
+
+                    {/* Notification Settings */}
+                    <div className="bg-gray-50 p-6 rounded-2xl shadow-sm">
+                        <h3 className="text-xl font-bold text-gray-800 mb-4">Notification Settings</h3>
+                        <p className="text-sm text-gray-600 mb-6">Choose what you want to be notified about.</p>
+                        <div className="space-y-4">
+                            <NotificationToggle
+                                label="New Community Posts"
+                                description="Get notified when someone posts on the bulletin board."
+                                enabled={user.notificationPreferences?.newPosts ?? true}
+                                onChange={(enabled) => handlePreferenceChange('newPosts', enabled)}
+                            />
+                            <NotificationToggle
+                                label="New Local Events"
+                                description="Receive alerts for new events listed in the marketplace."
+                                enabled={user.notificationPreferences?.newEvents ?? true}
+                                onChange={(enabled) => handlePreferenceChange('newEvents', enabled)}
+                            />
                         </div>
                     </div>
 
@@ -97,8 +145,11 @@ const ProfilePage: React.FC = () => {
                                 myPosts.length > 0 ? myPosts.map(post => (
                                     <div key={post.id} className="bg-gray-50 p-4 rounded-lg flex justify-between items-start">
                                         <div>
-                                            <h4 className="font-bold text-gray-800">{post.title}</h4>
-                                            <p className="text-sm text-gray-600 mt-1">{post.content.substring(0, 100)}...</p>
+                                            <div className="flex items-center gap-x-3 mb-1">
+                                                <h4 className="font-bold text-gray-800">{post.title}</h4>
+                                                <span className="text-xs font-semibold bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">{post.category}</span>
+                                            </div>
+                                            <p className="text-sm text-gray-600">{post.content.substring(0, 100)}...</p>
                                             <p className="text-xs text-gray-400 mt-2">{post.timestamp}</p>
                                         </div>
                                         <div className="flex space-x-2 flex-shrink-0 ml-4">

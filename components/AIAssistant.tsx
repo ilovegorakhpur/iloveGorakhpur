@@ -1,8 +1,11 @@
 
+
+
 import React, { useState, useRef, useEffect } from 'react';
 import { askGorakhpurGuide } from '../services/geminiService';
 import { SparklesIcon, SendIcon, LocationPinIcon, MicrophoneIcon } from './icons';
 import type { Message, Location } from '../types';
+import { useContent } from '../context/ContentContext';
 
 declare global {
   interface Window {
@@ -22,6 +25,7 @@ const AIAssistant: React.FC = () => {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
   
+  const { events, services, products } = useContent();
   const chatEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -66,7 +70,7 @@ const AIAssistant: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const { text, groundingChunks } = await askGorakhpurGuide(message, isThinkingMode, location);
+      const { text, groundingChunks } = await askGorakhpurGuide(message, events, services, products, isThinkingMode, location);
       const modelMessage: Message = { role: 'model', content: text, groundingChunks };
       setMessages(prev => [...prev, modelMessage]);
     } catch (err: any) {
@@ -133,10 +137,10 @@ const AIAssistant: React.FC = () => {
   };
   
   const examplePrompts = [
-    "What are the top 5 must-visit places in Gorakhpur?",
-    "Tell me about the history of the Gorakhnath Temple.",
-    "Where can I find the best street food near me?",
-    "What is Gorakhpur famous for?",
+    "गोरखपुर में घूमने के लिए शीर्ष 5 स्थान कौन से हैं?",
+    "इस सप्ताह के अंत में कौन से कार्यक्रम हो रहे हैं?",
+    "मुझे एक अच्छा इलेक्ट्रीशियन कहां मिल सकता है?",
+    "स्थानीय हस्तशिल्प खरीदने के लिए सबसे अच्छी जगह कौन सी है?",
   ];
 
   const handleExampleClick = (prompt: string) => {
@@ -146,12 +150,12 @@ const AIAssistant: React.FC = () => {
   const ChatMessage: React.FC<{ message: Message }> = ({ message }) => {
     const isUser = message.role === 'user';
     return (
-      <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}>
+      <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in-up`}>
         <div 
           className={`max-w-md lg:max-w-2xl px-4 py-3 rounded-2xl shadow-sm ${
             isUser 
               ? 'bg-orange-500 text-white rounded-br-none' 
-              : 'bg-white text-gray-800 rounded-bl-none border border-gray-200'
+              : 'bg-gray-100 text-gray-800 rounded-bl-none'
           }`}
         >
           <p className="whitespace-pre-wrap text-sm sm:text-base">{message.content}</p>
@@ -201,8 +205,8 @@ const AIAssistant: React.FC = () => {
               <ChatMessage key={index} message={msg} />
             ))}
             {isLoading && (
-              <div className="flex justify-start">
-                <div className="max-w-md lg:max-w-2xl px-4 py-3 rounded-2xl bg-white text-gray-800 rounded-bl-none border border-gray-200 shadow-sm">
+              <div className="flex justify-start animate-fade-in-up">
+                <div className="max-w-md lg:max-w-2xl px-4 py-3 rounded-2xl bg-gray-100 text-gray-800 rounded-bl-none shadow-sm">
                   <div className="flex items-center space-x-2">
                     <span className="text-sm sm:text-base font-medium text-gray-600">{isThinkingMode ? "Thinking deeply..." : "Thinking..."}</span>
                     <div className="flex space-x-1">

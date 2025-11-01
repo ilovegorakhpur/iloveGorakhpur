@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 export interface FeatureCardProps {
@@ -22,6 +23,18 @@ export interface User {
     name: string;
     email: string;
     avatarUrl?: string;
+    notificationPreferences?: {
+        newPosts: boolean;
+        newEvents: boolean;
+    };
+}
+
+export interface Comment {
+  id: number;
+  author: string;
+  creatorId: string;
+  timestamp: string;
+  content: string;
 }
 
 export interface Post {
@@ -31,6 +44,9 @@ export interface Post {
   content: string;
   title: string;
   creatorId?: string;
+  category: string;
+  likes?: string[];
+  comments?: Comment[];
 }
 
 // New types for Itinerary Planner

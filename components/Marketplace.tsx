@@ -35,6 +35,7 @@ const Marketplace: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [shareStatus, setShareStatus] = useState('');
     const [cartStatus, setCartStatus] = useState('');
+    const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
 
     // Events State
     const [showEventForm, setShowEventForm] = useState(false);
@@ -57,6 +58,31 @@ const Marketplace: React.FC = () => {
     // Review State (for Quick View modal)
     const [newReviewRating, setNewReviewRating] = useState(0);
     const [newReviewComment, setNewReviewComment] = useState('');
+    
+    // Load recently viewed items from localStorage on initial render
+    useEffect(() => {
+        try {
+            const storedItems = localStorage.getItem('recentlyViewed');
+            if (storedItems) {
+                setRecentlyViewed(JSON.parse(storedItems));
+            }
+        } catch (error) {
+            console.error("Failed to parse recently viewed items from localStorage", error);
+        }
+    }, []);
+
+    const handleProductView = (product: Product) => {
+        setSelectedProduct(product);
+        
+        // Update recently viewed items
+        const newRecentlyViewed = [
+            product,
+            ...recentlyViewed.filter(p => p.id !== product.id)
+        ].slice(0, 4); // Keep only the last 4 items
+
+        setRecentlyViewed(newRecentlyViewed);
+        localStorage.setItem('recentlyViewed', JSON.stringify(newRecentlyViewed));
+    };
 
 
     const handleTabChange = (tab: 'events' | 'products') => {
@@ -180,6 +206,12 @@ const Marketplace: React.FC = () => {
         } else {
             setEvents(prev => [newEvent, ...prev]);
         }
+        
+        console.log('// SIMULATING PUSH NOTIFICATION: A new event was created. A notification would be sent to subscribed users.');
+        // In a real app, this would trigger a backend call.
+        // The backend would then use FCM to send notifications to users
+        // who have opted-in for 'newEvents' notifications.
+        
         setShowEventForm(false);
     };
     
@@ -396,13 +428,40 @@ const Marketplace: React.FC = () => {
                     )}
                     
                      {activeTab === 'products' && (
+                        <>
+                         {recentlyViewed.length > 0 && (
+                                <div className="mb-12">
+                                    <h3 className="text-xl font-bold text-gray-800 mb-4">Recently Viewed</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                        {recentlyViewed.map(product => (
+                                             <div key={`recent-${product.id}`} className="bg-white rounded-xl shadow-md overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col group">
+                                                <div className="relative">
+                                                    <img className="h-56 w-full object-cover" src={product.imageUrl} alt={product.name} />
+                                                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <button onClick={() => handleProductView(product)} className="px-4 py-2 bg-white/80 text-black font-semibold rounded-full backdrop-blur-sm">Quick View</button>
+                                                    </div>
+                                                </div>
+                                                <div className="p-4 flex flex-col flex-grow">
+                                                    <h3 className="text-base font-bold text-gray-800 mt-1 flex-grow truncate">{product.name}</h3>
+                                                    <div className="mt-4 flex items-center justify-between">
+                                                        <p className="text-lg font-bold text-gray-900">₹{product.price}</p>
+                                                         <button onClick={() => handleAddToCart(product)} className="p-2 bg-orange-100 text-orange-600 rounded-full hover:bg-orange-500 hover:text-white transition-colors">
+                                                            <PlusIcon />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                             {filteredProducts.map(product => (
                                 <div key={product.id} className="bg-white rounded-xl shadow-md overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col group">
                                     <div className="relative">
                                         <img className="h-56 w-full object-cover" src={product.imageUrl} alt={product.name} />
                                         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            <button onClick={() => setSelectedProduct(product)} className="px-4 py-2 bg-white/80 text-black font-semibold rounded-full backdrop-blur-sm">Quick View</button>
+                                            <button onClick={() => handleProductView(product)} className="px-4 py-2 bg-white/80 text-black font-semibold rounded-full backdrop-blur-sm">Quick View</button>
                                         </div>
                                     </div>
                                     <div className="p-4 flex flex-col flex-grow">
@@ -429,6 +488,7 @@ const Marketplace: React.FC = () => {
                                 </div>
                             ))}
                         </div>
+                        </>
                     )}
 
                     {(activeTab === 'events' && filteredEvents.length === 0) && (

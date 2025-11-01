@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import FeatureCard from './FeatureCard';
@@ -15,10 +16,12 @@ import LocalServices from './components/LocalServices';
 import LocalNews from './components/LocalNews';
 import Marketplace from './components/Marketplace';
 import ProfilePage from './components/ProfilePage';
+import { initializeFirebase, requestNotificationPermission } from './utils/firebase';
 
 const App: React.FC = () => {
   const { user, isAuthModalOpen } = useAuth();
   const { isCartOpen } = useCart();
+  const [notificationsRequested, setNotificationsRequested] = useState(false);
   
   const features = [
     {
@@ -37,6 +40,29 @@ const App: React.FC = () => {
       description: 'Catch up on the latest news and stories from around Gorakhpur, with AI-powered summaries.'
     },
   ];
+
+  useEffect(() => {
+    initializeFirebase();
+  }, []);
+
+  useEffect(() => {
+    // Check if user is logged in and we haven't asked for notification permission in this session yet.
+    if (user && !notificationsRequested) {
+      // Use a timeout to avoid overwhelming the user immediately on login
+      setTimeout(() => {
+        if (Notification.permission === 'default') {
+          const wantsNotifications = window.confirm(
+            'Would you like to receive notifications for new posts and events?'
+          );
+          if (wantsNotifications) {
+            requestNotificationPermission();
+          }
+        }
+        // Mark that we've handled the notification request for this session
+        setNotificationsRequested(true);
+      }, 3000);
+    }
+  }, [user, notificationsRequested]);
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">

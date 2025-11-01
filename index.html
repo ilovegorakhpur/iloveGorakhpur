@@ -14,6 +14,19 @@
       body {
         font-family: 'Poppins', sans-serif;
       }
+      @keyframes fade-in-up {
+        0% {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-in-up {
+        animation: fade-in-up 0.4s ease-out forwards;
+      }
     </style>
   <script type="importmap">
 {
@@ -28,5 +41,8 @@
 </head>
   <body class="bg-gray-50 text-gray-800">
     <div id="root"></div>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js"></script>
   </body>
 </html>
