@@ -1,10 +1,11 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { UserCircleIcon, LogoutIcon, MenuIcon, XIcon } from './icons';
+import { useCart } from '../context/CartContext';
+import { UserCircleIcon, LogoutIcon, MenuIcon, XIcon, ShoppingCartIcon } from './icons';
 
 const Header: React.FC = () => {
   const { user, logout, openAuthModal } = useAuth();
+  const { cartItemCount, openCart } = useCart();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -82,7 +83,7 @@ const Header: React.FC = () => {
           
           <div className="flex items-center space-x-2">
             {/* Desktop Auth Section */}
-            <div className="hidden md:flex items-center space-x-2">
+            <div className="hidden md:flex items-center space-x-4">
               {user ? (
                 <div className="relative" ref={profileMenuRef}>
                   <button onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)} className="focus:outline-none">
@@ -128,6 +129,14 @@ const Header: React.FC = () => {
                   </button>
                 </div>
               )}
+               <button onClick={openCart} className="relative p-2 text-gray-600 hover:text-orange-600 focus:outline-none" aria-label={`View cart with ${cartItemCount} items`}>
+                <ShoppingCartIcon className="h-6 w-6" />
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-white text-xs font-bold">
+                    {cartItemCount}
+                  </span>
+                )}
+              </button>
             </div>
 
              {/* Mobile Menu Button */}
@@ -206,6 +215,24 @@ const Header: React.FC = () => {
                   </button>
                 </div>
               )}
+            </div>
+            <div className="py-3 border-t border-gray-200">
+                <div className="px-5">
+                    <button 
+                        onClick={() => { openCart(); setIsMobileMenuOpen(false); }}
+                        className="w-full flex items-center justify-between rounded-md text-base font-medium text-gray-700 hover:text-orange-600 hover:bg-gray-50 p-2"
+                    >
+                        <span className="flex items-center">
+                            <ShoppingCartIcon className="h-6 w-6 mr-2" />
+                            <span>My Cart</span>
+                        </span>
+                        {cartItemCount > 0 && (
+                             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-white text-xs font-bold">
+                                {cartItemCount}
+                            </span>
+                        )}
+                    </button>
+                </div>
             </div>
             <div className="py-3 border-t border-gray-200">
                 <div className="px-2 space-y-1">

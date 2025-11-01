@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -8,7 +7,9 @@ import CommunityBulletin from './components/CommunityBulletin';
 import AIAssistant from './components/AIAssistant';
 import Footer from './components/Footer';
 import AuthModal from './components/AuthModal';
+import CartModal from './components/CartModal';
 import { useAuth } from './context/AuthContext';
+import { useCart } from './context/CartContext';
 import { NewspaperIcon, ServicesIcon, ShoppingCartIcon } from './components/icons';
 import LocalServices from './components/LocalServices';
 import LocalNews from './components/LocalNews';
@@ -16,6 +17,8 @@ import Marketplace from './components/Marketplace';
 
 const App: React.FC = () => {
   const { isAuthModalOpen } = useAuth();
+  const { isCartOpen } = useCart();
+  
   const features = [
     {
       icon: <ShoppingCartIcon />,
@@ -37,6 +40,7 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       {isAuthModalOpen && <AuthModal />}
+      {isCartOpen && <CartModal />}
       <Header />
       <main className="flex-grow">
         <Hero />

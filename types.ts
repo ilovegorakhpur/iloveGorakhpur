@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 export interface FeatureCardProps {
@@ -96,4 +95,8 @@ export interface Product {
   category: string;
   creatorId?: string;
   description?: string;
+}
+
+export interface CartItem extends Product {
+  quantity: number;
 }

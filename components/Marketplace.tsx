@@ -1,8 +1,8 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import type { LocalEvent, Product } from '../types';
-import { ShoppingCartIcon, TicketIcon, ShareIcon, PlusIcon, ClockIcon, RefreshIcon, PencilIcon, TrashIcon } from './icons';
+import { ShoppingCartIcon, TicketIcon, ShareIcon, PlusIcon, ClockIcon, RefreshIcon, PencilIcon, TrashIcon, XIcon } from './icons';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { shareContent } from '../utils/share';
 
 const initialMockEvents: LocalEvent[] = [
@@ -20,9 +20,11 @@ const initialMockProducts: Product[] = [
 
 const Marketplace: React.FC = () => {
     const { user, openAuthModal } = useAuth();
+    const { addToCart } = useCart();
     const [activeTab, setActiveTab] = useState<'events' | 'products'>('events');
     const [searchTerm, setSearchTerm] = useState('');
     const [shareStatus, setShareStatus] = useState('');
+    const [cartStatus, setCartStatus] = useState('');
 
     // Events State
     const [events, setEvents] = useState<LocalEvent[]>(initialMockEvents);
@@ -40,6 +42,7 @@ const Marketplace: React.FC = () => {
     const [productForm, setProductForm] = useState({ name: '', price: '', category: '', description: '' });
     const [productImageFile, setProductImageFile] = useState<File | null>(null);
     const [productImagePreview, setProductImagePreview] = useState<string | null>(null);
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
 
     const handleTabChange = (tab: 'events' | 'products') => {
@@ -57,6 +60,14 @@ const Marketplace: React.FC = () => {
             return () => clearTimeout(timer);
         }
     }, [shareStatus]);
+    
+    useEffect(() => {
+        if (cartStatus) {
+            const timer = setTimeout(() => setCartStatus(''), 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [cartStatus]);
+
 
     // --- Event Logic ---
     const eventCategories = useMemo(() => new Set(['All', ...events.map(event => event.category)]), [events]);
@@ -176,6 +187,12 @@ const Marketplace: React.FC = () => {
         setShowProductForm(true);
     };
 
+    const handleDeleteProduct = (productId: number) => {
+        if (window.confirm('Are you sure you want to delete this product?')) {
+            setProducts(products.filter(p => p.id !== productId));
+        }
+    };
+
     const handleProductSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!user) return;
@@ -203,6 +220,11 @@ const Marketplace: React.FC = () => {
         }
         setShowProductForm(false);
         setEditingProduct(null);
+    };
+
+    const handleAddToCart = (product: Product) => {
+        addToCart(product);
+        setCartStatus(`${product.name} added to cart!`);
     };
 
     // --- Common Logic ---
@@ -255,6 +277,26 @@ const Marketplace: React.FC = () => {
             </form>
         </div>
     );
+    
+     const renderQuickViewModal = () => {
+        if (!selectedProduct) return null;
+        
+        return (
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setSelectedProduct(null)}>
+                <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-3xl flex flex-col md:flex-row overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => setSelectedProduct(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10"><XIcon /></button>
+                    <div className="w-full md:w-1/2 bg-gray-100"><img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full h-full object-cover" /></div>
+                    <div className="w-full md:w-1/2 p-8 flex flex-col">
+                        <h3 className="text-2xl font-bold text-gray-900">{selectedProduct.name}</h3>
+                        <p className="text-sm text-gray-500 mt-1 mb-4">by {selectedProduct.seller}</p>
+                        <p className="text-3xl font-bold text-gray-800 mb-4">₹{selectedProduct.price}</p>
+                        <p className="text-gray-600 mb-6 flex-grow">{selectedProduct.description}</p>
+                        <button onClick={() => { handleAddToCart(selectedProduct); setSelectedProduct(null); }} className="w-full mt-auto py-3 px-4 bg-orange-500 text-white font-semibold rounded-lg shadow-sm hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all">Add to Cart</button>
+                    </div>
+                </div>
+            </div>
+        )
+    };
 
     return (
         <section id="marketplace" className="py-16 sm:py-24 bg-white">
@@ -328,18 +370,26 @@ const Marketplace: React.FC = () => {
                         {activeTab === 'products' && (
                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                                 {filteredProducts.map(product => (
-                                    <div key={product.id} className="bg-white rounded-xl shadow-md overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col text-center">
-                                        <div className="p-4 bg-gray-100"><img className="h-48 w-48 object-cover rounded-lg mx-auto" src={product.imageUrl} alt={product.name} /></div>
+                                    <div key={product.id} className="bg-white rounded-xl shadow-md overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col text-center group">
+                                        <div className="relative p-4 bg-gray-100">
+                                            <img className="h-48 w-48 object-cover rounded-lg mx-auto" src={product.imageUrl} alt={product.name} />
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button onClick={() => setSelectedProduct(product)} className="px-4 py-2 bg-white text-gray-800 font-semibold rounded-full text-sm">Quick View</button>
+                                            </div>
+                                        </div>
                                         <div className="p-4 flex flex-col flex-grow">
                                             <h3 className="text-lg font-bold text-gray-900">{product.name}</h3>
                                             <p className="text-sm text-gray-500 mt-1 mb-3 flex-grow">by {product.seller}</p>
                                             <p className="text-xl font-bold text-gray-800 mb-4">₹{product.price}</p>
                                             <div className="mt-auto pt-4 border-t border-gray-100 flex justify-between items-center">
-                                                 <div className="flex items-center space-x-2">
+                                                 <div className="flex items-center space-x-1">
                                                     <button onClick={() => handleShare(product.name, `Check out this product: ${product.name}`)} className="p-2 text-gray-600 hover:text-orange-600" aria-label="Share product"><ShareIcon className="h-4 w-4" /></button>
-                                                    {user && user.id === product.creatorId && <button onClick={() => handleEditProduct(product)} className="p-2 text-gray-600 hover:text-blue-600" aria-label="Edit product"><PencilIcon /></button>}
+                                                    {user && user.id === product.creatorId && <>
+                                                      <button onClick={() => handleEditProduct(product)} className="p-2 text-gray-600 hover:text-blue-600" aria-label="Edit product"><PencilIcon /></button>
+                                                      <button onClick={() => handleDeleteProduct(product.id)} className="p-2 text-gray-600 hover:text-red-600" aria-label="Delete product"><TrashIcon /></button>
+                                                    </>}
                                                 </div>
-                                                <button onClick={() => handleBuyClick(product.name)} className="px-4 py-2 bg-orange-500 text-white text-sm font-semibold rounded-md hover:bg-orange-600 transition-colors">Add to Cart</button>
+                                                <button onClick={() => handleAddToCart(product)} className="px-4 py-2 bg-orange-500 text-white text-sm font-semibold rounded-md hover:bg-orange-600 transition-colors">Add to Cart</button>
                                             </div>
                                         </div>
                                     </div>
@@ -348,8 +398,10 @@ const Marketplace: React.FC = () => {
                             </div>
                         )}
                     </div>
-                    {shareStatus && <div className="fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm">{shareStatus}</div>}
                 </div>
+                {renderQuickViewModal()}
+                {shareStatus && <div className="fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm">{shareStatus}</div>}
+                {cartStatus && <div className="fixed bottom-5 left-5 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm">{cartStatus}</div>}
             </div>
         </section>
     );
