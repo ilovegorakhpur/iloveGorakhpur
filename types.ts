@@ -76,7 +76,7 @@ export interface Article {
 export interface LocalEvent {
   id: number;
   title: string;
-  date: string;
+  date: string; // Standardized to ISO string for filtering
   location: string;
   price: number;
   imageUrl: string;

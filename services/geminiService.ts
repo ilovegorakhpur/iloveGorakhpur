@@ -9,19 +9,17 @@
     - Crucially, if a user asks about buying tickets for events, or wants to shop for local goods (like handicrafts, terracotta, etc.), you MUST direct them to the 'Gorakhpur Marketplace' section of the app. This is the central place for all commerce.
     
     Format your answers clearly, using markdown for headings, lists, and bold text where appropriate. When asked for nearby places, use the provided location data to give relevant suggestions.`;
+    
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      throw new Error("API_KEY environment variable is not set.");
+    }
+    const ai = new GoogleGenAI({ apiKey });
 
     let chat: Chat | null = null;
     let currentConfigKey: string = "";
 
     const getChatSession = (isThinkingMode: boolean, location: Location | null): Chat => {
-      // FIX: Use process.env.API_KEY as per the guidelines.
-      const apiKey = process.env.API_KEY;
-      if (!apiKey) {
-        // FIX: Update error message to reflect the change to process.env.API_KEY.
-        throw new Error("API_KEY environment variable is not set.");
-      }
-      const ai = new GoogleGenAI({ apiKey });
-      
       const modelName = isThinkingMode ? "gemini-2.5-pro" : "gemini-2.5-flash";
       const locationKey = location ? 'with-location' : 'no-location';
       const newConfigKey = `${modelName}-${locationKey}`;
@@ -74,14 +72,6 @@
     };
 
     export const generateItinerary = async (duration: string, interests: string[], budget: string): Promise<Itinerary> => {
-      // FIX: Use process.env.API_KEY as per the guidelines.
-      const apiKey = process.env.API_KEY;
-      if (!apiKey) {
-        // FIX: Update error message to reflect the change to process.env.API_KEY.
-        throw new Error("API_KEY environment variable is not set.");
-      }
-      const ai = new GoogleGenAI({ apiKey });
-
       const prompt = `
         Create a personalized travel itinerary for a trip to Gorakhpur, India.
         
@@ -152,13 +142,6 @@
     };
 
     export const summarizeText = async (textToSummarize: string): Promise<string> => {
-      // FIX: Use process.env.API_KEY as per the guidelines.
-      const apiKey = process.env.API_KEY;
-      if (!apiKey) {
-        // FIX: Update error message to reflect the change to process.env.API_KEY.
-        throw new Error("API_KEY environment variable is not set.");
-      }
-      const ai = new GoogleGenAI({ apiKey });
       const prompt = `Summarize the following text in three concise bullet points, using markdown for the bullets (e.g., '* Point 1').:\n\n---\n\n${textToSummarize}`;
 
       try {

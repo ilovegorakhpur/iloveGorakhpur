@@ -5,10 +5,30 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { shareContent } from '../utils/share';
 
+// Helper function to get the start of a day
+const getStartOfDay = (date: Date) => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
+};
+
+const formatDate = (dateString: string) => {
+    const options: Intl.DateTimeFormatOptions = {
+        month: 'short',
+        day: 'numeric',
+        weekday: 'short',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true,
+    };
+    return new Date(dateString).toLocaleString('en-US', options);
+}
+
 const initialMockEvents: LocalEvent[] = [
-  { id: 1, title: 'Live Music Night at The Brew House', date: 'Sat, Aug 24, 8:00 PM', location: 'The Brew House, Golghar', price: 499, imageUrl: 'https://picsum.photos/400/250?random=10', category: 'Music', duration: '3 hours', creatorId: '99999' }, // Not editable by mock user
-  { id: 2, title: 'Gorakhpur Terracotta Workshop', date: 'Sun, Aug 25, 11:00 AM', location: 'Craft Village, Taramandal', price: 250, imageUrl: 'https://picsum.photos/400/250?random=11', category: 'Workshop', duration: '4 hours', recurring: 'Weekly', creatorId: '67890' }, // Editable by mock user
-  { id: 3, title: 'Sunday Stand-up Comedy', date: 'Sun, Aug 25, 7:00 PM', location: 'Central Perk Cafe', price: 300, imageUrl: 'https://picsum.photos/400/250?random=12', category: 'Comedy', duration: '2 hours', creatorId: '99999' },
+  { id: 1, title: 'Live Music Night at The Brew House', date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), location: 'The Brew House, Golghar', price: 499, imageUrl: 'https://picsum.photos/400/250?random=10', category: 'Music', duration: '3 hours', creatorId: '99999' },
+  { id: 2, title: 'Gorakhpur Terracotta Workshop', date: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString(), location: 'Craft Village, Taramandal', price: 250, imageUrl: 'https://picsum.photos/400/250?random=11', category: 'Workshop', duration: '4 hours', recurring: 'Weekly', creatorId: '67890' },
+  { id: 3, title: 'Sunday Stand-up Comedy', date: new Date().toISOString(), location: 'Central Perk Cafe', price: 300, imageUrl: 'https://picsum.photos/400/250?random=12', category: 'Comedy', duration: '2 hours', creatorId: '99999' },
+  { id: 4, title: 'Monthly Tech Meetup', date: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(), location: 'IIT Gorakhpur', price: 0, imageUrl: 'https://picsum.photos/400/250?random=13', category: 'Workshop', duration: 'Full Day', creatorId: '67890' },
 ];
 
 const initialMockProducts: Product[] = [
@@ -31,6 +51,7 @@ const Marketplace: React.FC = () => {
     const [showEventForm, setShowEventForm] = useState(false);
     const [editingEvent, setEditingEvent] = useState<LocalEvent | null>(null);
     const [eventCategory, setEventCategory] = useState('All');
+    const [dateFilter, setDateFilter] = useState('All');
     const [eventForm, setEventForm] = useState({ title: '', date: '', location: '', price: '', category: '', duration: '', recurring: 'None' });
     const [eventImageFile, setEventImageFile] = useState<File | null>(null);
     const [eventImagePreview, setEventImagePreview] = useState<string | null>(null);
@@ -71,14 +92,39 @@ const Marketplace: React.FC = () => {
 
     // --- Event Logic ---
     const eventCategories = useMemo(() => new Set(['All', ...events.map(event => event.category)]), [events]);
+    const dateFilters = ['All', 'Today', 'This Week', 'This Month'];
 
     const filteredEvents = useMemo(() => {
+        const now = new Date();
+        const today = getStartOfDay(now);
+        const startOfWeek = getStartOfDay(now);
+        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(endOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        endOfMonth.setHours(23, 59, 59, 999);
+
         return events.filter(event => {
             const categoryMatch = eventCategory === 'All' || event.category === eventCategory;
             const searchMatch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) || event.category.toLowerCase().includes(searchTerm.toLowerCase());
-            return categoryMatch && searchMatch;
+            
+            let dateMatch = true;
+            const eventDate = new Date(event.date);
+
+            if (dateFilter === 'Today') {
+                dateMatch = eventDate >= today && eventDate < new Date(today.getTime() + 24 * 60 * 60 * 1000);
+            } else if (dateFilter === 'This Week') {
+                dateMatch = eventDate >= startOfWeek && eventDate <= endOfWeek;
+            } else if (dateFilter === 'This Month') {
+                dateMatch = eventDate >= startOfMonth && eventDate <= endOfMonth;
+            }
+
+            return categoryMatch && searchMatch && dateMatch;
         });
-    }, [searchTerm, events, eventCategory]);
+    }, [searchTerm, events, eventCategory, dateFilter]);
 
     const handleEventFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setEventForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
     
@@ -100,9 +146,11 @@ const Marketplace: React.FC = () => {
 
     const handleEditEvent = (event: LocalEvent) => {
         setEditingEvent(event);
+        // Format date for datetime-local input
+        const localDate = new Date(event.date).toISOString().slice(0, 16);
         setEventForm({
             title: event.title,
-            date: event.date,
+            date: localDate,
             location: event.location,
             price: String(event.price),
             category: event.category,
@@ -122,11 +170,14 @@ const Marketplace: React.FC = () => {
     const handleEventSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!user) return;
+        
+        const eventDateISO = new Date(eventForm.date).toISOString();
 
         if (editingEvent) { // Update existing event
             const updatedEvent: LocalEvent = {
                 ...editingEvent,
                 ...eventForm,
+                date: eventDateISO,
                 price: Number(eventForm.price),
                 imageUrl: eventImagePreview || editingEvent.imageUrl,
                 duration: eventForm.duration || undefined,
@@ -137,6 +188,7 @@ const Marketplace: React.FC = () => {
             const newEventData: LocalEvent = {
                 id: Date.now(),
                 ...eventForm,
+                date: eventDateISO,
                 price: Number(eventForm.price),
                 imageUrl: eventImagePreview || `https://picsum.photos/400/250?random=${Date.now()}`,
                 duration: eventForm.duration || undefined,
@@ -261,7 +313,7 @@ const Marketplace: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <input name="title" value={formState.title} onChange={handleChange} placeholder="Event Title" className="w-full px-4 py-2 rounded-md border border-gray-300" required />
                         <input name="category" value={formState.category} onChange={handleChange} placeholder="Category (e.g., Music)" className="w-full px-4 py-2 rounded-md border border-gray-300" required />
-                        <input name="date" value={formState.date} onChange={handleChange} placeholder="Date & Time" className="w-full px-4 py-2 rounded-md border border-gray-300" required />
+                        <input name="date" value={formState.date} onChange={handleChange} type="datetime-local" placeholder="Date & Time" className="w-full px-4 py-2 rounded-md border border-gray-300" required />
                         <input name="location" value={formState.location} onChange={handleChange} placeholder="Location" className="w-full px-4 py-2 rounded-md border border-gray-300" required />
                         <input name="price" value={formState.price} onChange={handleChange} type="number" placeholder="Price (0 for free)" className="w-full px-4 py-2 rounded-md border border-gray-300" required />
                         <input name="duration" value={formState.duration} onChange={handleChange} placeholder="Duration (e.g., 2 hours)" className="w-full px-4 py-2 rounded-md border border-gray-300" />
@@ -326,8 +378,13 @@ const Marketplace: React.FC = () => {
                     </div>
                     
                     {activeTab === 'events' && (
-                        <div className="mb-8 flex flex-wrap justify-center gap-2">
-                            {Array.from(eventCategories).map(category => (<button key={category} onClick={() => setEventCategory(category)} className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${eventCategory === category ? 'bg-orange-500 text-white shadow-sm' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{category}</button>))}
+                        <div className="mb-8 flex flex-col sm:flex-row flex-wrap justify-center gap-x-2 gap-y-4">
+                           <div className="flex flex-wrap justify-center gap-2 border-b sm:border-b-0 sm:border-r border-gray-200 pb-4 sm:pb-0 sm:pr-4">
+                                {Array.from(eventCategories).map(category => (<button key={category} onClick={() => setEventCategory(category)} className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${eventCategory === category ? 'bg-orange-500 text-white shadow-sm' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{category}</button>))}
+                           </div>
+                           <div className="flex flex-wrap justify-center gap-2">
+                                {dateFilters.map(filter => (<button key={filter} onClick={() => setDateFilter(filter)} className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${dateFilter === filter ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{filter}</button>))}
+                           </div>
                         </div>
                     )}
                     
@@ -341,7 +398,7 @@ const Marketplace: React.FC = () => {
                                     <div key={event.id} className="bg-white rounded-xl shadow-md overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col">
                                         <img className="h-48 w-full object-cover" src={event.imageUrl} alt={event.title} />
                                         <div className="p-4 flex flex-col flex-grow">
-                                            <p className="text-sm font-semibold text-orange-600 mb-1">{event.date}</p>
+                                            <p className="text-sm font-semibold text-orange-600 mb-1">{formatDate(event.date)}</p>
                                             <h3 className="text-lg font-bold text-gray-900 flex-grow">{event.title}</h3>
                                             <p className="text-sm text-gray-500 mt-1">{event.location}</p>
                                             <div className="flex items-center text-xs text-gray-500 mt-2 space-x-4">
