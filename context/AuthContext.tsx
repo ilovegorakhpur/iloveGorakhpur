@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useContext, ReactNode } from 'react';
-import type { User } from '../types';
+import type { User, Bookmark } from '../types';
 import usePersistentState from '../hooks/usePersistentState';
 
 type AuthModalView = 'login' | 'register';
@@ -19,12 +19,17 @@ interface AuthContextType {
   switchToLogin: () => void;
   switchToRegister: () => void;
   updateNotificationPreferences: (prefs: { newPosts: boolean; newEvents: boolean; }) => void;
+  bookmarks: Bookmark[];
+  addBookmark: (bookmark: Bookmark) => void;
+  removeBookmark: (bookmark: Bookmark) => void;
+  isBookmarked: (bookmark: Bookmark) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = usePersistentState<User | null>('user', null);
+  const [bookmarks, setBookmarks] = usePersistentState<Bookmark[]>('bookmarks', []);
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalView, setAuthModalView] = useState<AuthModalView>('login');
@@ -122,6 +127,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const addBookmark = (bookmark: Bookmark) => {
+      setBookmarks(prev => [...prev, bookmark]);
+  };
+  
+  const removeBookmark = (bookmark: Bookmark) => {
+      setBookmarks(prev => prev.filter(b => !(b.type === bookmark.type && b.itemId === bookmark.itemId)));
+  };
+
+  const isBookmarked = (bookmark: Bookmark): boolean => {
+      return bookmarks.some(b => b.type === bookmark.type && b.itemId === bookmark.itemId);
+  };
+
+
   const value = {
     user,
     isLoading,
@@ -136,6 +154,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     switchToLogin,
     switchToRegister,
     updateNotificationPreferences,
+    bookmarks,
+    addBookmark,
+    removeBookmark,
+    isBookmarked,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

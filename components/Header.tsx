@@ -21,16 +21,18 @@ const Header: React.FC<HeaderProps> = ({ onShowLegal }) => {
 
   const navLinks = [
     { href: '#features', label: 'Features' },
+    { href: '#map-view', label: 'Map View' },
     { href: '#marketplace', label: 'Marketplace' },
     { href: '#news', label: 'News'},
     { href: '#itinerary-planner', label: 'Itinerary Planner' },
+    { href: '#explained', label: 'Explained' },
     { href: '#services', label: 'Services' },
     { href: '#community', label: 'Community' },
     { href: '#ai-assistant', label: 'AI Assistant' },
   ];
   
-  const mainNavLinks = navLinks.filter(link => ['#marketplace', '#community', '#ai-assistant'].includes(link.href));
-  const moreNavLinks = navLinks.filter(link => ['#features', '#news', '#itinerary-planner', '#services'].includes(link.href));
+  const mainNavLinks = navLinks.filter(link => ['#marketplace', '#community', '#ai-assistant', '#map-view'].includes(link.href));
+  const moreNavLinks = navLinks.filter(link => !mainNavLinks.find(main => main.href === link.href));
 
   // Effect to close menus on outside click
   useEffect(() => {

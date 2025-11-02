@@ -5,6 +5,7 @@ import { askGorakhpurGuideStream } from '../services/geminiService';
 import { SparklesIcon, SendIcon, LocationPinIcon, MicrophoneIcon } from './icons';
 import type { Message, Location } from '../types';
 import { useContent } from '../context/ContentContext';
+import { useAuth } from '../context/AuthContext';
 
 declare global {
   interface Window {
@@ -57,14 +58,35 @@ const AIAssistant: React.FC = () => {
   const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
+
+  const { user, openAuthModal } = useAuth();
+  const [isLocked, setIsLocked] = useState(false);
+  const [questionsLeft, setQuestionsLeft] = useState(10);
   
   const { events, services, products } = useContent();
   const chatEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
+  const FREE_QUESTION_LIMIT = 10;
+  const QUESTION_COUNT_KEY = 'aiQuestionCount';
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading, showThinking]);
+
+  useEffect(() => {
+    if (user) {
+      setIsLocked(false);
+      setQuestionsLeft(Infinity);
+    } else {
+      const count = parseInt(localStorage.getItem(QUESTION_COUNT_KEY) || '0', 10);
+      const remaining = FREE_QUESTION_LIMIT - count;
+      setQuestionsLeft(remaining > 0 ? remaining : 0);
+      if (remaining <= 0) {
+        setIsLocked(true);
+      }
+    }
+  }, [user]);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -96,6 +118,22 @@ const AIAssistant: React.FC = () => {
 
   const sendMessage = async (message: string) => {
     if (!message.trim() || isLoading) return;
+
+    if (isLocked) {
+        openAuthModal('register');
+        return;
+    }
+    
+    if (!user) {
+        const currentCount = parseInt(localStorage.getItem(QUESTION_COUNT_KEY) || '0', 10);
+        const newCount = currentCount + 1;
+        localStorage.setItem(QUESTION_COUNT_KEY, newCount.toString());
+        const remaining = FREE_QUESTION_LIMIT - newCount;
+        setQuestionsLeft(remaining > 0 ? remaining : 0);
+        if (remaining <= 0) {
+            setIsLocked(true);
+        }
+    }
 
     const userMessage: Message = { role: 'user', content: message };
     setMessages(prev => [...prev, userMessage]);
@@ -314,58 +352,86 @@ const AIAssistant: React.FC = () => {
           </div>
 
           <div className="p-4 sm:p-6 border-t border-gray-200 bg-gray-100/50 rounded-b-2xl">
-            <div className="flex items-center justify-center mb-4">
-               <label htmlFor="location-toggle" className="flex items-center cursor-pointer select-none">
-                <div className="relative">
-                  <input type="checkbox" id="location-toggle" className="sr-only" checked={isLocationEnabled} onChange={handleLocationToggle} />
-                  <div className={`block w-14 h-8 rounded-full transition-colors ${isLocationEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
-                  <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full shadow-sm transition-transform ${isLocationEnabled ? 'translate-x-full' : ''}`}></div>
+            {isLocked ? (
+              <div className="text-center p-4 bg-orange-50 border border-orange-200 rounded-lg animate-fade-in-up">
+                <h4 className="font-semibold text-orange-800">You've reached your free question limit!</h4>
+                <p className="text-sm text-orange-700 mt-1">Please sign up or log in to continue asking unlimited questions.</p>
+                <div className="mt-4 flex justify-center space-x-4">
+                    <button
+                        onClick={() => openAuthModal('login')}
+                        className="px-6 py-2 bg-white border border-orange-500 text-orange-500 font-semibold rounded-md hover:bg-orange-50 transition-colors"
+                    >
+                        Login
+                    </button>
+                    <button
+                        onClick={() => openAuthModal('register')}
+                        className="px-6 py-2 bg-orange-500 text-white font-semibold rounded-md hover:bg-orange-600 transition-colors"
+                    >
+                        Sign Up
+                    </button>
                 </div>
-                <div className="ml-3 text-gray-700">
-                  <span className="font-semibold text-sm">Use My Location</span>
-                  <p className="text-xs text-gray-500">For nearby places.</p>
-                </div>
-              </label>
             </div>
-            
-            {locationStatus === 'loading' && <p className="text-xs text-center text-gray-500 mb-2">Getting your location...</p>}
-            {locationStatus === 'success' && <p className="text-xs text-center text-green-600 mb-2">Location shared successfully!</p>}
-            {locationStatus === 'error' && <p className="text-xs text-center text-red-600 mb-2">Error: {locationError}</p>}
-            
-            <form onSubmit={handleSubmit}>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder={isListening ? "Listening..." : "Ask your question here..."}
-                  className="w-full p-4 pr-28 text-gray-700 bg-white rounded-full border-2 border-gray-200 focus:border-orange-500 focus:ring-orange-500 focus:outline-none transition-all"
-                  disabled={isLoading}
-                  autoComplete="off"
-                />
-                <div className="absolute top-1/2 right-2 -translate-y-1/2 flex items-center space-x-1">
-                  <button
-                    type="button"
-                    onClick={handleToggleListening}
-                    className={`p-3 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
-                      isListening ? 'bg-red-100 text-red-500 animate-pulse' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    disabled={isLoading || !recognitionRef.current}
-                    aria-label={isListening ? "Stop listening" : "Start voice input"}
-                  >
-                    <MicrophoneIcon />
-                  </button>
-                  <button
-                    type="submit"
-                    className="p-3 bg-orange-500 text-white rounded-full hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
-                    disabled={isLoading || !query.trim()}
-                    aria-label="Send message"
-                  >
-                    <SendIcon />
-                  </button>
-                </div>
+            ) : (
+            <>
+              <div className="flex items-center justify-center mb-4">
+                <label htmlFor="location-toggle" className="flex items-center cursor-pointer select-none">
+                  <div className="relative">
+                    <input type="checkbox" id="location-toggle" className="sr-only" checked={isLocationEnabled} onChange={handleLocationToggle} />
+                    <div className={`block w-14 h-8 rounded-full transition-colors ${isLocationEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
+                    <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full shadow-sm transition-transform ${isLocationEnabled ? 'translate-x-full' : ''}`}></div>
+                  </div>
+                  <div className="ml-3 text-gray-700">
+                    <span className="font-semibold text-sm">Use My Location</span>
+                    <p className="text-xs text-gray-500">For nearby places.</p>
+                  </div>
+                </label>
               </div>
-            </form>
+              
+              {locationStatus === 'loading' && <p className="text-xs text-center text-gray-500 mb-2">Getting your location...</p>}
+              {locationStatus === 'success' && <p className="text-xs text-center text-green-600 mb-2">Location shared successfully!</p>}
+              {locationStatus === 'error' && <p className="text-xs text-center text-red-600 mb-2">Error: {locationError}</p>}
+              
+              <form onSubmit={handleSubmit}>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder={isListening ? "Listening..." : "Ask your question here..."}
+                    className="w-full p-4 pr-28 text-gray-700 bg-white rounded-full border-2 border-gray-200 focus:border-orange-500 focus:ring-orange-500 focus:outline-none transition-all"
+                    disabled={isLoading}
+                    autoComplete="off"
+                  />
+                  <div className="absolute top-1/2 right-2 -translate-y-1/2 flex items-center space-x-1">
+                    <button
+                      type="button"
+                      onClick={handleToggleListening}
+                      className={`p-3 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
+                        isListening ? 'bg-red-100 text-red-500 animate-pulse' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      disabled={isLoading || !recognitionRef.current}
+                      aria-label={isListening ? "Stop listening" : "Start voice input"}
+                    >
+                      <MicrophoneIcon />
+                    </button>
+                    <button
+                      type="submit"
+                      className="p-3 bg-orange-500 text-white rounded-full hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+                      disabled={isLoading || !query.trim()}
+                      aria-label="Send message"
+                    >
+                      <SendIcon />
+                    </button>
+                  </div>
+                </div>
+              </form>
+              {!user && (
+                  <p className="text-xs text-center text-gray-500 mt-3">
+                      You have {questionsLeft} free question{questionsLeft !== 1 ? 's' : ''} left.
+                  </p>
+              )}
+            </>
+            )}
           </div>
         </div>
       </div>

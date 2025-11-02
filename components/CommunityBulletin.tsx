@@ -1,17 +1,25 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Post, Comment } from '../types';
-import { CommunityIcon, ShareIcon, HeartIcon, ChatBubbleIcon, SendIcon } from './icons';
+import { CommunityIcon, ShareIcon, HeartIcon, ChatBubbleIcon, SendIcon, BookmarkIcon, LoadingIcon, ExclamationCircleIcon, PlusIcon, XIcon } from './icons';
 import { useAuth } from '../context/AuthContext';
 import { useContent } from '../context/ContentContext';
 import { shareContent } from '../utils/share';
+import { moderateContent } from '../services/geminiService';
+import { fileToBase64 } from '../utils/imageUtils';
+
 
 const CommunityBulletin: React.FC = () => {
-  const { user, openAuthModal } = useAuth();
+  const { user, openAuthModal, addBookmark, removeBookmark, isBookmarked } = useAuth();
   const { posts, setPosts } = useContent();
   const [newPostTitle, setNewPostTitle] = useState('');
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostCategory, setNewPostCategory] = useState('');
+  const [postImageFile, setPostImageFile] = useState<File | null>(null);
+  const [postImagePreview, setPostImagePreview] = useState<string | null>(null);
+  const [isModerating, setIsModerating] = useState(false);
+  const [moderationError, setModerationError] = useState<string | null>(null);
+
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [shareStatus, setShareStatus] = useState('');
   const [visibleComments, setVisibleComments] = useState<Record<number, boolean>>({});
@@ -34,33 +42,61 @@ const CommunityBulletin: React.FC = () => {
     });
     setShareStatus(status);
   };
+  
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+        setPostImageFile(file);
+        const base64 = await fileToBase64(file);
+        setPostImagePreview(base64);
+    }
+  };
 
-  const handlePostSubmit = (e: React.FormEvent) => {
+  const handlePostSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPostTitle.trim() || !newPostContent.trim() || !user || !newPostCategory) return;
-
-    const newPost: Post = {
-      id: Date.now(),
-      author: user.name,
-      creatorId: user.id,
-      timestamp: 'Just now',
-      title: newPostTitle,
-      content: newPostContent,
-      category: newPostCategory,
-      likes: [],
-      comments: [],
-    };
-
-    setPosts(prevPosts => [newPost, ...prevPosts]);
     
-    console.log('// SIMULATING PUSH NOTIFICATION: A new post was created. A notification would be sent to subscribed users.');
-    // In a real app, this would trigger a backend call.
-    // The backend would then use FCM to send notifications to users
-    // who have opted-in for 'newPosts' notifications.
+    setIsModerating(true);
+    setModerationError(null);
     
-    setNewPostTitle('');
-    setNewPostContent('');
-    setNewPostCategory('');
+    try {
+        const fullPostText = `${newPostTitle}\n${newPostContent}`;
+        const moderationResult = await moderateContent(fullPostText);
+        
+        if (moderationResult.decision === 'UNSAFE') {
+            setModerationError("This post appears to violate our community guidelines and cannot be published. Please revise your content.");
+            setIsModerating(false);
+            return;
+        }
+
+        const newPost: Post = {
+          id: Date.now(),
+          author: user.name,
+          creatorId: user.id,
+          timestamp: 'Just now',
+          title: newPostTitle,
+          content: newPostContent,
+          category: newPostCategory,
+          imageUrl: postImagePreview || undefined,
+          likes: [],
+          comments: [],
+        };
+
+        setPosts(prevPosts => [newPost, ...prevPosts]);
+        
+        console.log('// SIMULATING PUSH NOTIFICATION: A new post was created. A notification would be sent to subscribed users.');
+        
+        setNewPostTitle('');
+        setNewPostContent('');
+        setNewPostCategory('');
+        setPostImageFile(null);
+        setPostImagePreview(null);
+    } catch (error) {
+        console.error(error);
+        setModerationError("An error occurred while checking your post. Please try again.");
+    } finally {
+        setIsModerating(false);
+    }
   };
 
   const handleLike = (postId: number) => {
@@ -82,6 +118,20 @@ const CommunityBulletin: React.FC = () => {
         })
     );
   };
+
+  const handleBookmarkToggle = (post: Post) => {
+      if (!user) {
+          openAuthModal('login');
+          return;
+      }
+      const bookmark = { type: 'post' as const, itemId: post.id };
+      if (isBookmarked(bookmark)) {
+          removeBookmark(bookmark);
+      } else {
+          addBookmark(bookmark);
+      }
+  };
+
 
   const handleCommentSubmit = (e: React.FormEvent, postId: number) => {
     e.preventDefault();
@@ -168,13 +218,35 @@ const CommunityBulletin: React.FC = () => {
                     required
                   ></textarea>
                 </div>
+                <div>
+                    <label htmlFor="post-image-upload" className="block text-sm font-medium text-gray-700 mb-2">Attach an image (optional)</label>
+                    <div className="mt-1 flex items-center space-x-4 p-3 border-2 border-dashed border-gray-300 rounded-lg">
+                        {postImagePreview && (
+                            <div className="relative">
+                                <img src={postImagePreview} alt="Post preview" className="h-20 w-20 object-cover rounded-md"/>
+                                <button type="button" onClick={() => setPostImagePreview(null)} className="absolute -top-2 -right-2 bg-white rounded-full p-0.5 shadow-md"><XIcon/></button>
+                            </div>
+                        )}
+                        <input type="file" id="post-image-upload" className="hidden" onChange={handleImageChange} accept="image/*" />
+                        <label htmlFor="post-image-upload" className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 flex items-center">
+                            <PlusIcon />
+                            <span className="ml-2">Upload Image</span>
+                        </label>
+                    </div>
+                </div>
+                {moderationError && (
+                    <div className="bg-red-50 border border-red-200 text-sm text-red-800 rounded-lg p-3 flex items-start">
+                        <ExclamationCircleIcon className="h-5 w-5 mr-3 flex-shrink-0 text-red-500" />
+                        <p>{moderationError}</p>
+                    </div>
+                )}
                 <div className="text-right">
                   <button
                     type="submit"
-                    className="px-6 py-2 bg-orange-500 text-white font-semibold rounded-md hover:bg-orange-600 disabled:bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
-                    disabled={!newPostTitle.trim() || !newPostContent.trim() || !newPostCategory}
+                    className="px-6 py-2 bg-orange-500 text-white font-semibold rounded-md hover:bg-orange-600 disabled:bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 flex items-center justify-center min-w-[100px] float-right"
+                    disabled={!newPostTitle.trim() || !newPostContent.trim() || !newPostCategory || isModerating}
                   >
-                    Post
+                    {isModerating ? <LoadingIcon /> : 'Post'}
                   </button>
                 </div>
               </form>
@@ -224,6 +296,7 @@ const CommunityBulletin: React.FC = () => {
                    <span className="text-xs font-semibold bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full">{post.category}</span>
                 </div>
                 <h4 className="text-xl font-bold text-gray-800 mb-2">{post.title}</h4>
+                {post.imageUrl && <img src={post.imageUrl} alt={post.title} className="rounded-lg mb-4 max-h-80 w-full object-cover"/>}
                 <p className="text-gray-600 whitespace-pre-wrap">{post.content}</p>
                 <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
                     <div className="flex items-center space-x-4">
@@ -235,9 +308,11 @@ const CommunityBulletin: React.FC = () => {
                            <ChatBubbleIcon />
                            <span>{post.comments?.length || 0}</span>
                         </button>
-                         <button onClick={() => handleShare(post)} className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-orange-600 font-medium transition-colors" aria-label="Share post">
+                         <button onClick={() => handleShare(post)} className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-green-600 font-medium transition-colors" aria-label="Share post">
                             <ShareIcon className="h-4 w-4" />
-                            <span>Share</span>
+                        </button>
+                        <button onClick={() => handleBookmarkToggle(post)} className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-orange-600 font-medium transition-colors" aria-label="Bookmark post">
+                            <BookmarkIcon className={`h-5 w-5 ${isBookmarked({ type: 'post', itemId: post.id }) ? 'text-orange-500 fill-current' : ''}`} />
                         </button>
                     </div>
                     <p className="text-xs text-gray-500">{post.timestamp}</p>

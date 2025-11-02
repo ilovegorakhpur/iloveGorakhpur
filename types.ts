@@ -12,6 +12,11 @@ export interface Location {
   longitude: number;
 }
 
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
 export interface Message {
   role: 'user' | 'model';
   content: string;
@@ -28,6 +33,12 @@ export interface User {
         newEvents: boolean;
     };
 }
+
+export interface Bookmark {
+  type: 'post' | 'event' | 'product' | 'article';
+  itemId: number;
+}
+
 
 export interface Comment {
   id: number;
@@ -47,6 +58,7 @@ export interface Post {
   category: string;
   likes?: string[];
   comments?: Comment[];
+  imageUrl?: string;
 }
 
 // New types for Itinerary Planner
@@ -77,6 +89,7 @@ export interface ServiceListing {
   phone: string;
   rating: number;
   isVerified: boolean;
+  coordinates: Coordinates;
 }
 
 // New type for Local News
@@ -101,6 +114,7 @@ export interface LocalEvent {
   duration?: string;
   recurring?: string;
   creatorId?: string;
+  coordinates: Coordinates;
 }
 
 export interface Review {
@@ -121,6 +135,7 @@ export interface Product {
   creatorId?: string;
   description?: string;
   reviews?: Review[];
+  coordinates: Coordinates;
 }
 
 export interface CartItem extends Product {

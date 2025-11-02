@@ -1,8 +1,36 @@
 
 import React, { useState, useMemo } from 'react';
 import type { ServiceListing } from '../types';
-import { ServicesIcon, VerifiedIcon } from './icons';
+import { ServicesIcon, VerifiedIcon, StarIcon } from './icons';
 import { useContent } from '../context/ContentContext';
+
+const ServiceCard: React.FC<{ service: ServiceListing }> = ({ service }) => (
+    <div className="bg-white p-6 rounded-xl shadow-md transition-shadow duration-300 hover:shadow-lg flex flex-col">
+      <div className="flex-grow">
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="text-xl font-bold text-gray-800 pr-2">{service.name}</h3>
+          {service.isVerified && (
+            <div className="flex-shrink-0 flex items-center bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+              <VerifiedIcon />
+              <span className="ml-1">Verified</span>
+            </div>
+          )}
+        </div>
+        <p className="text-sm font-medium text-orange-600 mb-3">{service.category}</p>
+        <p className="text-gray-600 text-sm mb-4">{service.description}</p>
+      </div>
+      <div className="mt-auto pt-4 border-t border-gray-100 flex justify-between items-center">
+         <div className="flex items-center">
+              <StarIcon className="h-5 w-5 text-yellow-400" />
+              <span className="text-gray-700 font-bold text-sm ml-1">{service.rating}</span>
+         </div>
+         <a href={`tel:${service.phone}`} className="px-4 py-2 bg-green-500 text-white text-sm font-semibold rounded-md hover:bg-green-600 transition-colors">
+              Call Now
+          </a>
+      </div>
+    </div>
+);
+const MemoizedServiceCard = React.memo(ServiceCard);
 
 const LocalServices: React.FC = () => {
   const { services: mockServices } = useContent();
@@ -115,30 +143,7 @@ const LocalServices: React.FC = () => {
           {/* Service Listings */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {processedServices.map(service => (
-              <div key={service.id} className="bg-white p-6 rounded-xl shadow-md transition-shadow duration-300 hover:shadow-lg flex flex-col">
-                <div className="flex-grow">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-xl font-bold text-gray-800 pr-2">{service.name}</h3>
-                    {service.isVerified && (
-                      <div className="flex-shrink-0 flex items-center bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                        <VerifiedIcon />
-                        <span className="ml-1">Verified</span>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-sm font-medium text-orange-600 mb-3">{service.category}</p>
-                  <p className="text-gray-600 text-sm mb-4">{service.description}</p>
-                </div>
-                <div className="mt-auto pt-4 border-t border-gray-100 flex justify-between items-center">
-                   <div className="flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                        <span className="text-gray-700 font-bold text-sm ml-1">{service.rating}</span>
-                   </div>
-                   <a href={`tel:${service.phone}`} className="px-4 py-2 bg-green-500 text-white text-sm font-semibold rounded-md hover:bg-green-600 transition-colors">
-                        Call Now
-                    </a>
-                </div>
-              </div>
+              <MemoizedServiceCard key={service.id} service={service} />
             ))}
             {processedServices.length === 0 && (
                 <div className="md:col-span-2 text-center py-10 bg-white rounded-xl shadow-md">

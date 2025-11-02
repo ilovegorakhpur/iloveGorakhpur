@@ -13,4 +13,4 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description }) =
   );
 };
 
-export default FeatureCard;
+export default React.memo(FeatureCard);

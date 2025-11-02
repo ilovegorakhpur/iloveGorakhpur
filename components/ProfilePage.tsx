@@ -2,7 +2,8 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useContent } from '../context/ContentContext';
-import { TrashIcon, UserCircleIcon, TicketIcon, ShoppingCartIcon, NewspaperIcon } from './icons';
+import { TrashIcon, UserCircleIcon, TicketIcon, ShoppingCartIcon, NewspaperIcon, BookmarkIcon } from './icons';
+import type { Post, LocalEvent, Product, Article } from '../types';
 
 const NotificationToggle: React.FC<{ label: string; description: string; enabled: boolean; onChange: (enabled: boolean) => void;}> = ({ label, description, enabled, onChange }) => (
     <div className="flex items-center justify-between bg-white p-4 rounded-lg border border-gray-200">
@@ -22,14 +23,25 @@ const NotificationToggle: React.FC<{ label: string; description: string; enabled
 
 
 const ProfilePage: React.FC = () => {
-    const { user, updateNotificationPreferences } = useAuth();
-    const { posts, setPosts, events, setEvents, products, setProducts } = useContent();
-    const [activeTab, setActiveTab] = useState<'posts' | 'events' | 'products'>('posts');
+    const { user, updateNotificationPreferences, bookmarks } = useAuth();
+    const { posts, setPosts, events, setEvents, products, setProducts, articles } = useContent();
+    const [activeTab, setActiveTab] = useState<'posts' | 'events' | 'products' | 'bookmarks'>('posts');
 
     const myPosts = useMemo(() => posts.filter(post => post.creatorId === user?.id), [posts, user]);
     const myEvents = useMemo(() => events.filter(event => event.creatorId === user?.id), [events, user]);
     const myProducts = useMemo(() => products.filter(product => product.creatorId === user?.id), [products, user]);
     
+    const myBookmarks = useMemo(() => {
+        return bookmarks.map(bookmark => {
+            let item: Post | LocalEvent | Product | Article | undefined;
+            if (bookmark.type === 'post') item = posts.find(p => p.id === bookmark.itemId);
+            if (bookmark.type === 'event') item = events.find(e => e.id === bookmark.itemId);
+            if (bookmark.type === 'product') item = products.find(p => p.id === bookmark.itemId);
+            if (bookmark.type === 'article') item = articles.find(a => a.id === bookmark.itemId);
+            return { ...bookmark, item };
+        }).filter(b => b.item); // Filter out any bookmarks for items that might have been deleted
+    }, [bookmarks, posts, events, products, articles]);
+
     // In a real app, these would call an API. Here we just update context state.
     const handleDeletePost = (postId: number) => {
         if (window.confirm('Are you sure you want to delete this post?')) {
@@ -75,6 +87,16 @@ const ProfilePage: React.FC = () => {
         return new Date(dateString).toLocaleString('en-US', options);
     }
 
+    const StatCard: React.FC<{icon: React.ReactNode, label: string, value: number}> = ({icon, label, value}) => (
+        <div className="bg-white p-4 rounded-lg flex items-center gap-4 border border-gray-200">
+            <div className="bg-orange-100 text-orange-600 p-3 rounded-full">{icon}</div>
+            <div>
+                <p className="text-2xl font-bold text-gray-800">{value}</p>
+                <p className="text-sm text-gray-500">{label}</p>
+            </div>
+        </div>
+    );
+
     return (
         <section id="profile" className="py-16 sm:py-24 bg-white">
             <div className="container mx-auto px-4">
@@ -93,6 +115,14 @@ const ProfilePage: React.FC = () => {
                             <p className="text-gray-600">{user.email}</p>
                         </div>
                     </div>
+                    
+                    {/* Stats */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                       <StatCard icon={<NewspaperIcon/>} label="Posts Created" value={myPosts.length} />
+                       <StatCard icon={<TicketIcon/>} label="Events Listed" value={myEvents.length} />
+                       <StatCard icon={<ShoppingCartIcon className="h-6 w-6"/>} label="Products Listed" value={myProducts.length} />
+                    </div>
+
 
                     {/* Notification Settings */}
                     <div className="bg-gray-50 p-6 rounded-2xl shadow-sm">
@@ -135,6 +165,12 @@ const ProfilePage: React.FC = () => {
                                     className={`${activeTab === 'products' ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
                                 >
                                     <ShoppingCartIcon className="h-5 w-5" /> <span className="ml-2">My Products ({myProducts.length})</span>
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('bookmarks')}
+                                    className={`${activeTab === 'bookmarks' ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+                                >
+                                    <BookmarkIcon className="h-5 w-5" /> <span className="ml-2">My Bookmarks ({myBookmarks.length})</span>
                                 </button>
                             </nav>
                         </div>
@@ -193,6 +229,20 @@ const ProfilePage: React.FC = () => {
                                         </div>
                                     </div>
                                 )) : <p className="text-center text-gray-500 py-8">You haven't listed any products yet.</p>
+                            )}
+
+                            {activeTab === 'bookmarks' && (
+                                myBookmarks.length > 0 ? myBookmarks.map(({ type, itemId, item }) => (
+                                    <div key={`${type}-${itemId}`} className="bg-gray-50 p-4 rounded-lg flex justify-between items-center">
+                                        <div className="flex items-center">
+                                            {(item as any).imageUrl && <img src={(item as any).imageUrl} alt={(item as any).title || (item as any).name} className="h-16 w-16 rounded-md object-cover mr-4"/>}
+                                            <div>
+                                                <span className="text-xs font-semibold bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full capitalize">{type}</span>
+                                                <h4 className="font-bold text-gray-800 mt-1">{(item as any).title || (item as any).name}</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )) : <p className="text-center text-gray-500 py-8">You haven't bookmarked anything yet.</p>
                             )}
                         </div>
                     </div>

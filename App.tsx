@@ -17,6 +17,8 @@ import LocalServices from './components/LocalServices';
 import LocalNews from './components/LocalNews';
 import Marketplace from './components/Marketplace';
 import ProfilePage from './components/ProfilePage';
+import MapView from './components/MapView';
+import GorakhpurExplained from './components/GorakhpurExplained';
 import { initializeFirebase, requestNotificationPermission } from './utils/firebase';
 
 export type ModalContentType = 'terms' | 'privacy' | 'about' | 'contact';
@@ -97,10 +99,12 @@ const App: React.FC = () => {
             </div>
           </div>
         </section>
+        <MapView />
         <Marketplace />
         {user && <ProfilePage />}
         <LocalNews />
         <ItineraryPlanner />
+        <GorakhpurExplained />
         <LocalServices />
         <CommunityBulletin />
         <AIAssistant />

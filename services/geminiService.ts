@@ -1,23 +1,29 @@
 
-
     import { GoogleGenAI, Chat, GenerateContentResponse, Type, FunctionDeclaration, FunctionCall } from "@google/genai";
     import type { Location, Itinerary, LocalEvent, ServiceListing, Product } from '../types';
 
-    const SYSTEM_INSTRUCTION = `You are the 'Gorakhpur Guide', a friendly, knowledgeable, and passionate local expert for the city of Gorakhpur, India. Your personality is warm, welcoming, and you are always excited to share the best of your city. Think of yourself as a personal friend showing a visitor around.
+    const SYSTEM_INSTRUCTION = `You are the 'Gorakhpur Guide', a friendly, knowledgeable, and passionate local expert for the city of Gorakhpur, India. Your personality is warm, welcoming, and you are always excited to share the best of your city.
 
-**CRITICAL RULE: You are an expert for Gorakhpur ONLY. All questions from the user must be interpreted as being about Gorakhpur. NEVER ask the user for their city, state, or country. If you are asked about a different city, you MUST politely state that your expertise is limited to Gorakhpur.**
+---
+**CORE DIRECTIVES**
 
-**Behavioral Rules:**
-- **Tone:** Always maintain a proud and positive tone about Gorakhpur. Be enthusiastic and helpful.
-- **Proactive Suggestions:** If a user's query is broad (e.g., "what's there to do?"), proactively suggest a couple of options based on common interests (like food, history, or shopping) and ask them what they'd prefer to know more about.
-- **Formatting:** Use markdown for clear formatting (headings, lists, bold text). Make your answers easy to read.
-- **Location Awareness:** When using location data for nearby suggestions, mention that you're using their location to give personalized recommendations.
+1.  **TOOL FIRST, ALWAYS:** Your primary function is to use the provided tools ('findLocalEvents', 'findLocalServices', 'findLocalProducts') to give direct, specific answers. You MUST prioritize using these tools over providing general advice.
+2.  **NO EXTERNAL WEBSITES:** You MUST NOT recommend external websites, apps, or platforms like Facebook, BookMyShow, AllEvents.in, or suggest using a search engine. All your information comes directly from the app's internal listings.
+3.  **GORAKHPUR ONLY:** All user questions must be interpreted as being about Gorakhpur. NEVER ask for their city. If asked about another location, politely state your expertise is limited to Gorakhpur.
 
-**Tool Usage Rules:**
-- For event recommendations, use the 'findLocalEvents' tool. Format the results in a friendly list and tell users they can find more details in the Marketplace.
-- For professional services (plumbers, electricians, etc.), use the 'findLocalServices' tool to find verified experts. If you can't find one, suggest they browse the 'Verified Local Services' section.
-- For shopping queries about local specialties (like terracotta, handicrafts), use the 'findLocalProducts' tool. If nothing specific matches, guide them to the 'Gorakhpur Marketplace'.
-- When relevant, encourage users to connect with locals on the 'Community Bulletin Board' for more personal recommendations or discussions.`;
+---
+**RESPONSE GUIDELINES**
+
+- **Direct Answers:** When a user asks a question that can be answered by a tool (e.g., "show events," "find a plumber"), use the tool immediately and present the results clearly. Do not ask clarifying questions unless absolutely necessary to use the tool.
+- **Formatting:** Use markdown for clarity (headings, bold text, and especially lists). Make your answers easy to scan.
+- **Presenting Results:**
+    - **Events:** For each event, list its 'Title', 'Location', and 'Price'.
+    - **Products:** For each product, list its 'Name', 'Seller', and 'Price'.
+    - **Services:** For each service, list its 'Name', 'Category', and 'Rating'.
+- **Handling No Results:** If a tool returns no results, state that you couldn't find anything matching their specific request. Then, suggest they either broaden their search terms or browse the relevant section of the app directly.
+- **Call to Action:** After successfully providing results from a tool, end your response by encouraging the user to visit the 'Marketplace' or 'Verified Local Services' section for more details.
+- **Location Awareness:** When using the user's location for nearby suggestions, briefly mention it so they know they are getting personalized results.
+- **Tone:** Maintain a proud, enthusiastic, and helpful tone. You are a passionate local expert.`;
     
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
@@ -78,7 +84,7 @@
     };
 
     const getChatSession = (location: Location | null): Chat => {
-      const modelName = "gemini-2.5-pro";
+      const modelName = "gemini-2.5-flash";
       const locationKey = location ? 'with-location' : 'no-location';
       const toolsKey = 'with-events-services-products-tool';
       const newConfigKey = `${modelName}-${locationKey}-${toolsKey}`;
@@ -296,7 +302,7 @@
 
       try {
         const response = await ai.models.generateContent({
-          model: "gemini-2.5-pro", // Using a more powerful model for a complex creative task.
+          model: "gemini-2.5-flash",
           contents: prompt,
           config: {
             responseMimeType: "application/json",
@@ -332,4 +338,73 @@
         }
         throw new Error("An unknown error occurred while generating the summary.");
       }
+    };
+
+    export const moderateContent = async (text: string): Promise<{ decision: 'SAFE' | 'UNSAFE' }> => {
+        const prompt = `You are a content moderation AI. Analyze the following text and determine if it is SAFE or UNSAFE for a public community forum. Unsafe content includes hate speech, spam, harassment, explicit content, or calls to violence. Respond with only a JSON object with a single key 'decision' which can be either 'SAFE' or 'UNSAFE'.\n\nText to analyze: "${text}"`;
+
+        const schema = {
+            type: Type.OBJECT,
+            properties: {
+                decision: {
+                    type: Type.STRING,
+                    description: "The moderation decision, either 'SAFE' or 'UNSAFE'."
+                }
+            },
+            required: ["decision"]
+        };
+
+        try {
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+                config: {
+                    responseMimeType: 'application/json',
+                    responseSchema: schema,
+                }
+            });
+            const jsonText = response.text.trim();
+            const result = JSON.parse(jsonText);
+            if (result.decision === 'SAFE' || result.decision === 'UNSAFE') {
+                return result;
+            }
+            // Fallback for unexpected decision values
+            console.warn("Moderation returned unexpected value:", result.decision);
+            return { decision: 'UNSAFE' };
+        } catch (error) {
+            console.error("Error during content moderation:", error);
+            // Default to unsafe on error to be cautious
+            return { decision: 'UNSAFE' };
+        }
+    };
+
+    export const generateDescription = async (title: string, category: string): Promise<string> => {
+        const prompt = `You are a marketing assistant. Write a short, attractive, and engaging description for the following item. The description should be about 2-3 sentences long. Do not use markdown. Just return the plain text description.\n\nItem Title: '${title}', Category: '${category}'`;
+        try {
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+            });
+            return response.text.trim();
+        } catch (error) {
+            console.error("Error generating description:", error);
+            return "Failed to generate a description. Please write one manually.";
+        }
+    };
+
+    export const getTopicExplanation = async (topic: string): Promise<string> => {
+        const prompt = `You are the 'Gorakhpur Guide', a knowledgeable and passionate local expert. Write a detailed and engaging article about the following topic related to Gorakhpur: '${topic}'. Use markdown for formatting, including headings and lists, to make the content easy to read and visually appealing.`;
+        try {
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+            });
+            return response.text;
+        } catch (error) {
+            console.error("Error getting topic explanation:", error);
+            if (error instanceof Error) {
+                return `Sorry, I couldn't generate information on that topic right now. Error: ${error.message}`;
+            }
+            return "Sorry, an unknown error occurred while fetching information.";
+        }
     };

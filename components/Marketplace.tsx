@@ -1,11 +1,13 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import type { LocalEvent, Product, Review } from '../types';
-import { ShoppingCartIcon, TicketIcon, ShareIcon, PlusIcon, ClockIcon, RefreshIcon, PencilIcon, TrashIcon, XIcon, StarIcon } from './icons';
+import { ShoppingCartIcon, TicketIcon, ShareIcon, PlusIcon, ClockIcon, RefreshIcon, PencilIcon, TrashIcon, XIcon, StarIcon, SparklesIcon, LoadingIcon, BookmarkIcon } from './icons';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useContent } from '../context/ContentContext';
 import { shareContent } from '../utils/share';
+import { fileToBase64 } from '../utils/imageUtils';
+import { generateDescription } from '../services/geminiService';
 
 // Helper function to get the start of a day
 const getStartOfDay = (date: Date) => {
@@ -40,7 +42,7 @@ const FormSelect: React.FC<React.SelectHTMLAttributes<HTMLSelectElement>> = (pro
 
 
 const Marketplace: React.FC = () => {
-    const { user, openAuthModal } = useAuth();
+    const { user, openAuthModal, addBookmark, removeBookmark, isBookmarked } = useAuth();
     const { addToCart } = useCart();
     const { events, setEvents, products, setProducts } = useContent();
 
@@ -49,14 +51,14 @@ const Marketplace: React.FC = () => {
     const [shareStatus, setShareStatus] = useState('');
     const [cartStatus, setCartStatus] = useState('');
     const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
+    const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
 
     // Events State
     const [showEventForm, setShowEventForm] = useState(false);
     const [editingEvent, setEditingEvent] = useState<LocalEvent | null>(null);
     const [eventCategory, setEventCategory] = useState('All');
     const [dateFilter, setDateFilter] = useState('All');
-    const [eventForm, setEventForm] = useState({ title: '', date: '', location: '', price: '', category: '', duration: '', recurring: 'None' });
-    const [eventImageFile, setEventImageFile] = useState<File | null>(null);
+    const [eventForm, setEventForm] = useState({ title: '', date: '', location: '', price: '', category: '', duration: '', recurring: 'None', description: '' });
     const [eventImagePreview, setEventImagePreview] = useState<string | null>(null);
 
     // Products State
@@ -64,7 +66,6 @@ const Marketplace: React.FC = () => {
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [productCategory, setProductCategory] = useState('All');
     const [productForm, setProductForm] = useState({ name: '', price: '', category: '', description: '' });
-    const [productImageFile, setProductImageFile] = useState<File | null>(null);
     const [productImagePreview, setProductImagePreview] = useState<string | null>(null);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
@@ -158,20 +159,19 @@ const Marketplace: React.FC = () => {
         });
     }, [searchTerm, events, eventCategory, dateFilter]);
 
-    const handleEventFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setEventForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const handleEventFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setEventForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
     
-    const handleEventImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleEventImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            setEventImageFile(file);
-            setEventImagePreview(URL.createObjectURL(file));
+            const base64 = await fileToBase64(file);
+            setEventImagePreview(base64);
         }
     };
 
     const handleShowEventForm = () => {
         setEditingEvent(null);
-        setEventForm({ title: '', date: '', location: '', price: '', category: '', duration: '', recurring: 'None' });
-        setEventImageFile(null);
+        setEventForm({ title: '', date: '', location: '', price: '', category: '', duration: '', recurring: 'None', description: '' });
         setEventImagePreview(null);
         setShowEventForm(true);
     };
@@ -187,10 +187,10 @@ const Marketplace: React.FC = () => {
             price: String(event.price),
             category: event.category,
             duration: event.duration || '',
-            recurring: event.recurring || 'None'
+            recurring: event.recurring || 'None',
+            description: '' // Assuming events don't have descriptions yet
         });
         setEventImagePreview(event.imageUrl);
-        setEventImageFile(null);
         setShowEventForm(true);
     };
 
@@ -212,6 +212,7 @@ const Marketplace: React.FC = () => {
             duration: eventForm.duration,
             recurring: eventForm.recurring,
             creatorId: user.id,
+            coordinates: { lat: 26.7606, lng: 83.3732 } // Placeholder coordinates
         };
 
         if (editingEvent) {
@@ -244,18 +245,17 @@ const Marketplace: React.FC = () => {
 
     const handleProductFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setProductForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
-    const handleProductImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleProductImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            setProductImageFile(file);
-            setProductImagePreview(URL.createObjectURL(file));
+            const base64 = await fileToBase64(file);
+            setProductImagePreview(base64);
         }
     };
 
     const handleShowProductForm = () => {
         setEditingProduct(null);
         setProductForm({ name: '', price: '', category: '', description: '' });
-        setProductImageFile(null);
         setProductImagePreview(null);
         setShowProductForm(true);
     };
@@ -269,7 +269,6 @@ const Marketplace: React.FC = () => {
             description: product.description || '',
         });
         setProductImagePreview(product.imageUrl);
-        setProductImageFile(null);
         setShowProductForm(true);
     };
 
@@ -290,6 +289,7 @@ const Marketplace: React.FC = () => {
             creatorId: user.id,
             description: productForm.description,
             reviews: editingProduct ? editingProduct.reviews : [],
+            coordinates: { lat: 26.7606, lng: 83.3732 } // Placeholder
         };
 
         if (editingProduct) {
@@ -318,6 +318,25 @@ const Marketplace: React.FC = () => {
             url: window.location.href + '#marketplace',
         });
         setShareStatus(status);
+    };
+    
+    const handleGenerateDescription = async () => {
+        const title = activeTab === 'events' ? eventForm.title : productForm.name;
+        const category = activeTab === 'events' ? eventForm.category : productForm.category;
+        
+        if (!title || !category) {
+            alert("Please enter a title and category first.");
+            return;
+        }
+
+        setIsGeneratingDesc(true);
+        const desc = await generateDescription(title, category);
+        if (activeTab === 'events') {
+            setEventForm(prev => ({...prev, description: desc}));
+        } else {
+            setProductForm(prev => ({...prev, description: desc}));
+        }
+        setIsGeneratingDesc(false);
     };
 
     const handleReviewSubmit = (e: React.FormEvent) => {
@@ -404,13 +423,18 @@ const Marketplace: React.FC = () => {
                                             <div className="relative">
                                                 <img className="h-48 w-full object-cover" src={event.imageUrl} alt={event.title} />
                                                 <div className="absolute top-2 right-2 flex items-center gap-2">
+                                                     <button onClick={() => {
+                                                        const bookmark = { type: 'event' as const, itemId: event.id };
+                                                        isBookmarked(bookmark) ? removeBookmark(bookmark) : addBookmark(bookmark);
+                                                     }} className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-700 hover:bg-white hover:text-orange-600">
+                                                        <BookmarkIcon className={`h-4 w-4 ${isBookmarked({ type: 'event', itemId: event.id }) ? 'text-orange-500 fill-current' : ''}`} />
+                                                     </button>
                                                     {user?.id === event.creatorId && (
                                                         <>
                                                             <button onClick={() => handleEditEvent(event)} className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-700 hover:bg-white hover:text-blue-600"><PencilIcon/></button>
                                                             <button onClick={() => handleDeleteEvent(event.id)} className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-700 hover:bg-white hover:text-red-600"><TrashIcon/></button>
                                                         </>
                                                     )}
-                                                    <button onClick={() => handleShare(event)} className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-700 hover:bg-white hover:text-orange-600"><ShareIcon className="h-4 w-4"/></button>
                                                 </div>
                                             </div>
                                             <div className="p-4">
@@ -445,13 +469,18 @@ const Marketplace: React.FC = () => {
                                             <div className="relative">
                                                 <img className="h-56 w-full object-cover" src={product.imageUrl} alt={product.name} />
                                                 <div className="absolute top-2 right-2 flex flex-col items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => {
+                                                        const bookmark = { type: 'product' as const, itemId: product.id };
+                                                        isBookmarked(bookmark) ? removeBookmark(bookmark) : addBookmark(bookmark);
+                                                    }} className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-700 hover:bg-white hover:text-orange-600">
+                                                        <BookmarkIcon className={`h-4 w-4 ${isBookmarked({ type: 'product', itemId: product.id }) ? 'text-orange-500 fill-current' : ''}`} />
+                                                    </button>
                                                     {user?.id === product.creatorId && (
                                                         <>
                                                             <button onClick={() => handleEditProduct(product)} className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-700 hover:bg-white hover:text-blue-600"><PencilIcon/></button>
                                                             <button onClick={() => handleDeleteProduct(product.id)} className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-700 hover:bg-white hover:text-red-600"><TrashIcon/></button>
                                                         </>
                                                     )}
-                                                    <button onClick={() => handleProductView(product)} className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-700 hover:bg-white hover:text-orange-600"><ShareIcon className="h-4 w-4"/></button>
                                                 </div>
                                                 <button onClick={() => handleProductView(product)} className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-3/4 py-2 bg-white text-sm font-semibold text-gray-800 rounded-lg shadow-md opacity-0 group-hover:opacity-100 group-hover:-translate-y-2 transition-all">Quick View</button>
                                             </div>
@@ -536,7 +565,16 @@ const Marketplace: React.FC = () => {
                                         <div><FormLabel htmlFor="category">Category</FormLabel><FormInput type="text" name="category" id="category" value={productForm.category} onChange={handleProductFormChange} placeholder="e.g., Handicrafts, Food" required /></div>
                                     </div>
                                     <div><FormLabel htmlFor="price">Price (₹)</FormLabel><FormInput type="number" name="price" id="price" value={productForm.price} onChange={handleProductFormChange} required /></div>
-                                    <div><FormLabel htmlFor="description">Description</FormLabel><textarea name="description" id="description" value={productForm.description} onChange={handleProductFormChange} rows={4} className="w-full px-4 py-2 text-gray-700 bg-gray-100 rounded-md border border-gray-200 focus:border-orange-500 focus:ring-orange-500 focus:outline-none transition-colors" /></div>
+                                    <div>
+                                        <div className="flex justify-between items-center">
+                                            <FormLabel htmlFor="description">Description</FormLabel>
+                                            <button type="button" onClick={handleGenerateDescription} disabled={isGeneratingDesc} className="text-xs flex items-center gap-1 text-orange-600 font-semibold hover:text-orange-800 disabled:opacity-50">
+                                                {isGeneratingDesc ? <LoadingIcon /> : <SparklesIcon />}
+                                                Generate with AI
+                                            </button>
+                                        </div>
+                                        <textarea name="description" id="description" value={productForm.description} onChange={handleProductFormChange} rows={4} className="w-full px-4 py-2 text-gray-700 bg-gray-100 rounded-md border border-gray-200 focus:border-orange-500 focus:ring-orange-500 focus:outline-none transition-colors" />
+                                    </div>
                                     <div>
                                         <FormLabel htmlFor="product-image-upload">Product Image</FormLabel>
                                         <div className="mt-1 flex items-center space-x-4 p-4 border-2 border-dashed border-gray-300 rounded-lg">

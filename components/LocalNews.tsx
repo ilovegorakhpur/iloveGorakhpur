@@ -1,38 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
 import type { Article } from '../types';
-import { NewspaperIcon, SummarizeIcon, ShareIcon, XIcon } from './icons';
+import { NewspaperIcon, SummarizeIcon, ShareIcon, XIcon, BookmarkIcon } from './icons';
 import { summarizeText } from '../services/geminiService';
 import { shareContent } from '../utils/share';
-
-const mockArticles: Article[] = [
-  {
-    id: 1,
-    title: 'Gorakhpur Zoo Welcomes Two Bengal Tiger Cubs',
-    snippet: 'The Shaheed Ashfaq Ullah Khan Prani Udyan has announced the birth of two healthy Bengal tiger cubs, a significant event for the city\'s conservation efforts...',
-    imageUrl: 'https://picsum.photos/400/250?random=1',
-    content: `The Shaheed Ashfaq Ullah Khan Prani Udyan in Gorakhpur is celebrating a joyous occasion with the arrival of two Bengal tiger cubs. The cubs, one male and one female, were born to the zoo's resident tigress, 'Meera', and are reported to be in excellent health. Zoo officials have stated that this is a major milestone for their captive breeding program and a testament to the high standard of care provided at the facility. The cubs will be kept under close observation for the next few months and will not be available for public viewing immediately to ensure their well-being. This event is expected to significantly boost visitor interest and further establish the Gorakhpur Zoo as a key center for wildlife conservation in the region.`
-  },
-  {
-    id: 2,
-    title: 'New Flyover at Paidleganj to Ease Traffic Congestion',
-    snippet: 'Construction is set to begin on a new multi-lane flyover at the busy Paidleganj intersection, promising to alleviate long-standing traffic issues...',
-    imageUrl: 'https://picsum.photos/400/250?random=2',
-    content: `In a major infrastructural development for Gorakhpur, the government has approved the construction of a new six-lane flyover at the Paidleganj crossing. This intersection is one of the city's most notorious traffic bottlenecks, especially during peak hours. The project aims to provide a seamless flow of traffic for vehicles heading towards Deoria and Kushinagar from the city center. Officials from the Public Works Department have outlined a 24-month timeline for the project's completion. While some temporary disruptions are expected during the construction phase, the long-term benefits of reduced travel time and lower pollution levels are being hailed as a significant step forward for the city's urban planning.`
-  },
-   {
-    id: 3,
-    title: 'Annual Gorakhpur Mahotsav to Feature Local Artisans',
-    snippet: 'This year\'s Gorakhpur Mahotsav will place a special emphasis on promoting local arts and crafts, with over 50 stalls dedicated to regional artisans...',
-    imageUrl: 'https://picsum.photos/400/250?random=3',
-    content: `The upcoming Gorakhpur Mahotsav, scheduled for next month, is set to be a vibrant celebration of local culture, with a particular focus on the region's talented artisans. The event organizers have announced that a dedicated 'Shilp Gram' (Craft Village) will be a central attraction, featuring more than 50 stalls. These stalls will showcase a wide array of traditional products, including the world-famous terracotta pottery, handmade textiles, and intricate woodwork. The initiative aims to provide a platform for these artisans to reach a wider audience and to preserve the rich artistic heritage of the Purvanchal region. The festival will also include cultural performances, food festivals, and various competitions.`
-  },
-];
+import { useAuth } from '../context/AuthContext';
+import { useContent } from '../context/ContentContext';
 
 const ArticleCard: React.FC<{ article: Article, setShareStatus: (status: string) => void, onReadMore: (article: Article) => void }> = ({ article, setShareStatus, onReadMore }) => {
+    const { user, addBookmark, removeBookmark, isBookmarked, openAuthModal } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
     const [summary, setSummary] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+
+    const bookmarked = isBookmarked({ type: 'article', itemId: article.id });
 
     const handleShare = async () => {
         const status = await shareContent({
@@ -60,6 +41,19 @@ const ArticleCard: React.FC<{ article: Article, setShareStatus: (status: string)
         }
     };
     
+    const handleBookmarkToggle = () => {
+        if (!user) {
+            openAuthModal('login');
+            return;
+        }
+        const bookmark = { type: 'article' as const, itemId: article.id };
+        if (bookmarked) {
+            removeBookmark(bookmark);
+        } else {
+            addBookmark(bookmark);
+        }
+    };
+
     return (
         <div className="bg-white rounded-xl shadow-md overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col">
             <img className="h-48 w-full object-cover" src={article.imageUrl} alt={article.title} />
@@ -76,10 +70,18 @@ const ArticleCard: React.FC<{ article: Article, setShareStatus: (status: string)
                     <button onClick={() => onReadMore(article)} className="text-sm font-semibold text-orange-600 hover:text-orange-500">Read More</button>
                     <div className="flex items-center space-x-1">
                         <button
+                            onClick={handleBookmarkToggle}
+                            aria-label="Bookmark article"
+                            title="Bookmark article"
+                            className="p-2 rounded-full text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+                        >
+                           <BookmarkIcon className={`h-5 w-5 ${bookmarked ? 'text-orange-500 fill-current' : ''}`} />
+                        </button>
+                        <button
                             onClick={handleShare}
                             aria-label="Share article"
                             title="Share article"
-                            className="p-2 rounded-full text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+                            className="p-2 rounded-full text-gray-500 hover:text-green-600 hover:bg-green-50 transition-colors"
                         >
                             <ShareIcon className="h-4 w-4" />
                         </button>
@@ -107,7 +109,10 @@ const ArticleCard: React.FC<{ article: Article, setShareStatus: (status: string)
     );
 };
 
+const MemoizedArticleCard = React.memo(ArticleCard);
+
 const LocalNews: React.FC = () => {
+  const { articles } = useContent();
   const [shareStatus, setShareStatus] = useState('');
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
 
@@ -130,8 +135,8 @@ const LocalNews: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {mockArticles.map(article => (
-            <ArticleCard key={article.id} article={article} setShareStatus={setShareStatus} onReadMore={setSelectedArticle} />
+          {articles.map(article => (
+            <MemoizedArticleCard key={article.id} article={article} setShareStatus={setShareStatus} onReadMore={setSelectedArticle} />
           ))}
         </div>
 
