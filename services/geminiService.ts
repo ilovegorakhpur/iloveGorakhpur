@@ -1,4 +1,10 @@
-
+/*
+ * Copyright (c) 2024, iLoveGorakhpur Project Contributors.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. 
+ */
     import { GoogleGenAI, Chat, GenerateContentResponse, Type, FunctionDeclaration, FunctionCall } from "@google/genai";
     import type { Location, Itinerary, LocalEvent, ServiceListing, Product } from '../types';
 

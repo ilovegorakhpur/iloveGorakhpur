@@ -1,4 +1,10 @@
-
+/*
+ * Copyright (c) 2024, iLoveGorakhpur Project Contributors.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. 
+ */
 import React, { useState, useEffect } from 'react';
 import type { Article } from '../types';
 import { NewspaperIcon, SummarizeIcon, ShareIcon, XIcon, BookmarkIcon } from './icons';
