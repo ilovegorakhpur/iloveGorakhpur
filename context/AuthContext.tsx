@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, iLoveGorakhpur Project Contributors.
+ * Copyright (c) 2024, Jawahar R Mallah and iLoveGorakhpur Project Contributors.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -65,8 +65,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setTimeout(() => {
         const mockUser: User = {
           id: '12345',
-          name: 'Chandra Prakash',
-          email: 'chandra.prakash@example.com',
+          name: 'Jawahar R Mallah',
+          email: 'jawahar.mallah@example.com',
           avatarUrl: `https://i.pravatar.cc/150?u=12345`,
           subscriptionTier: 'pro', // This user is a Pro member
           notificationPreferences: {

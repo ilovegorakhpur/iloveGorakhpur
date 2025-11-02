@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, iLoveGorakhpur Project Contributors.
+ * Copyright (c) 2024, Jawahar R Mallah and iLoveGorakhpur Project Contributors.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the

@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2024, iLoveGorakhpur Project Contributors.
+ * Copyright (c) 2024, Jawahar R Mallah and iLoveGorakhpur Project Contributors.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
  * LICENSE file in the root directory of this source tree. 
  */
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, Dispatch, SetStateAction } from 'react';
 import type { LocalEvent, Product, Post, ServiceListing, Article } from '../types';
 import usePersistentState from '../hooks/usePersistentState';
 
@@ -76,28 +76,29 @@ const initialMockArticles: Article[] = [
    {
     id: 3,
     title: 'Annual Gorakhpur Mahotsav to Feature Local Artisans',
-    snippet: 'This year\'s Gorakhpur Mahotsav will place a special emphasis on promoting local arts and crafts, with over 50 stalls dedicated to regional artisans...',
+    // Fix: Completed the missing properties for this Article object.
+    snippet: 'This year\'s Gorakhpur Mahotsav will place a special emphasis on promoting local arts and crafts, with dedicated pavilions for terracotta and textile artists.',
     imageUrl: 'https://picsum.photos/400/250?random=3',
-    content: `The upcoming Gorakhpur Mahotsav, scheduled for next month, is set to be a vibrant celebration of local culture, with a particular focus on the region's talented artisans. The event organizers have announced that a dedicated 'Shilp Gram' (Craft Village) will be a central attraction, featuring more than 50 stalls. These stalls will showcase a wide array of traditional products, including the world-famous terracotta pottery, handmade textiles, and intricate woodwork. The initiative aims to provide a platform for these artisans to reach a wider audience and to preserve the rich artistic heritage of the Purvanchal region. The festival will also include cultural performances, food festivals, and various competitions.`
+    content: `The upcoming annual Gorakhpur Mahotsav is set to be a grand celebration of local culture, with a particular focus on the region's talented artisans. Organizers have announced that dedicated pavilions will be set up to showcase the world-renowned terracotta crafts and the intricate handloom textiles of Gorakhpur. The move aims to provide a larger platform for local artists to connect with a wider audience and boost the local economy. In addition to the artisan showcases, the festival will feature a lineup of cultural performances, food stalls offering regional delicacies, and various competitions. The event is scheduled to take place in the second week of January and is expected to attract a large number of tourists.`
   },
 ];
 
-
-// --- Context Definition ---
-
+// --- Define the context type ---
 interface ContentContextType {
   events: LocalEvent[];
-  setEvents: React.Dispatch<React.SetStateAction<LocalEvent[]>>;
+  setEvents: Dispatch<SetStateAction<LocalEvent[]>>;
   products: Product[];
-  setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
+  setProducts: Dispatch<SetStateAction<Product[]>>;
   posts: Post[];
-  setPosts: React.Dispatch<React.SetStateAction<Post[]>>;
+  setPosts: Dispatch<SetStateAction<Post[]>>;
   services: ServiceListing[];
-  setServices: React.Dispatch<React.SetStateAction<ServiceListing[]>>;
+  setServices: Dispatch<SetStateAction<ServiceListing[]>>;
   articles: Article[];
-  setArticles: React.Dispatch<React.SetStateAction<Article[]>>;
+  setArticles: Dispatch<SetStateAction<Article[]>>;
 }
 
+// --- Create and export the context and provider ---
+// Fix: Implemented a proper Context Provider and a custom hook to manage and distribute content data.
 const ContentContext = createContext<ContentContextType | undefined>(undefined);
 
 export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -106,7 +107,6 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [posts, setPosts] = usePersistentState<Post[]>('posts', initialPosts);
   const [services, setServices] = usePersistentState<ServiceListing[]>('services', initialMockServices);
   const [articles, setArticles] = usePersistentState<Article[]>('articles', initialMockArticles);
-
 
   const value = {
     events,

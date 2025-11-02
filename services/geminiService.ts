@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, iLoveGorakhpur Project Contributors.
+ * Copyright (c) 2024, Jawahar R Mallah and iLoveGorakhpur Project Contributors.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -31,7 +31,7 @@
 - **Location Awareness:** When using the user's location for nearby suggestions, briefly mention it so they know they are getting personalized results.
 - **Tone:** Maintain a proud, enthusiastic, and helpful tone. You are a passionate local expert.`;
     
-    const apiKey = process.env.API_KEY;
+    const apiKey = "YOUR_SECRET_API_KEY_HERE";
     if (!apiKey) {
       throw new Error("API_KEY environment variable is not set.");
     }

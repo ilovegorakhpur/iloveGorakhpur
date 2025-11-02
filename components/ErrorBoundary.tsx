@@ -10,16 +10,13 @@ interface State {
 }
 
 class ErrorBoundary extends Component<Props, State> {
-  // Fix: The 'Property 'props' does not exist' error suggests a potential issue with 'this' context.
-  // Using a constructor and explicitly calling super(props) is a more robust way to initialize the component,
-  // which can resolve such subtle type inference problems.
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      hasError: false,
-      error: undefined,
-    };
-  }
+  // Fix: Initialize state as a class property.
+  // This is a modern and clean way to set initial state in a class component,
+  // resolving issues with accessing `this.state` and `this.props`.
+  state: State = {
+    hasError: false,
+    error: undefined,
+  };
 
   static getDerivedStateFromError(error: Error): State {
     // Update state so the next render will show the fallback UI.
