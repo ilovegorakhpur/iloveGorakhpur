@@ -3,8 +3,11 @@ import React, { useState } from 'react';
 import { generateItinerary } from '../services/geminiService';
 import type { Itinerary } from '../types';
 import { CalendarIcon, LoadingIcon } from './icons';
+import { useAuth } from '../context/AuthContext';
+import usePersistentState from '../hooks/usePersistentState';
 
 const ItineraryPlanner: React.FC = () => {
+  const { isPro, openUpgradeModal, user } = useAuth();
   const [duration, setDuration] = useState('1 Day');
   const [interests, setInterests] = useState<string[]>([]);
   const [budget, setBudget] = useState('Mid-range');
@@ -12,6 +15,8 @@ const ItineraryPlanner: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [freeGenerationsLeft, setFreeGenerationsLeft] = usePersistentState<number>('itineraryGenerationsCount', 2);
+  
   const interestOptions = ['History', 'Food', 'Nature', 'Shopping', 'Spiritual', 'Art & Culture'];
 
   const handleInterestChange = (interest: string) => {
@@ -24,16 +29,26 @@ const ItineraryPlanner: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isPro && freeGenerationsLeft <= 0) {
+        openUpgradeModal();
+        return;
+    }
+
     if (interests.length === 0) {
       setError('Please select at least one interest.');
       return;
     }
+
     setError(null);
     setIsLoading(true);
     setItinerary(null);
     try {
       const result = await generateItinerary(duration, interests, budget);
       setItinerary(result);
+      if (!isPro) {
+          setFreeGenerationsLeft(prev => prev - 1);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to generate itinerary. Please try again.');
     } finally {
@@ -111,6 +126,11 @@ const ItineraryPlanner: React.FC = () => {
               </div>
                {error && <p className="text-sm text-red-600 text-center mt-4">{error}</p>}
             </form>
+            {user && !isPro && (
+                <div className="text-center mt-6">
+                    <p className="text-sm text-gray-600">You have <span className="font-bold text-orange-600">{freeGenerationsLeft} free itinerary generation{freeGenerationsLeft !== 1 ? 's' : ''}</span> left. <button onClick={openUpgradeModal} className="font-semibold text-blue-600 hover:underline">Upgrade to Pro</button> for unlimited plans.</p>
+                </div>
+            )}
           </div>
 
           {/* Results Section */}

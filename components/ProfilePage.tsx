@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useContent } from '../context/ContentContext';
-import { TrashIcon, UserCircleIcon, TicketIcon, ShoppingCartIcon, NewspaperIcon, BookmarkIcon } from './icons';
+import { TrashIcon, UserCircleIcon, TicketIcon, ShoppingCartIcon, NewspaperIcon, BookmarkIcon, SparklesIcon } from './icons';
 import type { Post, LocalEvent, Product, Article } from '../types';
 
 const NotificationToggle: React.FC<{ label: string; description: string; enabled: boolean; onChange: (enabled: boolean) => void;}> = ({ label, description, enabled, onChange }) => (
@@ -23,7 +23,7 @@ const NotificationToggle: React.FC<{ label: string; description: string; enabled
 
 
 const ProfilePage: React.FC = () => {
-    const { user, updateNotificationPreferences, bookmarks } = useAuth();
+    const { user, updateNotificationPreferences, bookmarks, isPro, openUpgradeModal } = useAuth();
     const { posts, setPosts, events, setEvents, products, setProducts, articles } = useContent();
     const [activeTab, setActiveTab] = useState<'posts' | 'events' | 'products' | 'bookmarks'>('posts');
 
@@ -111,7 +111,12 @@ const ProfilePage: React.FC = () => {
                             </div>
                         )}
                         <div>
-                            <h2 className="text-3xl font-bold text-gray-900">{user.name}</h2>
+                            <div className="flex items-center justify-center sm:justify-start gap-x-3">
+                                <h2 className="text-3xl font-bold text-gray-900">{user.name}</h2>
+                                {isPro && (
+                                    <span className="bg-gradient-to-r from-orange-500 to-pink-500 text-white text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">PRO</span>
+                                )}
+                            </div>
                             <p className="text-gray-600">{user.email}</p>
                         </div>
                     </div>
@@ -121,6 +126,27 @@ const ProfilePage: React.FC = () => {
                        <StatCard icon={<NewspaperIcon/>} label="Posts Created" value={myPosts.length} />
                        <StatCard icon={<TicketIcon/>} label="Events Listed" value={myEvents.length} />
                        <StatCard icon={<ShoppingCartIcon className="h-6 w-6"/>} label="Products Listed" value={myProducts.length} />
+                    </div>
+
+                    {/* Subscription Management */}
+                    <div className="bg-gradient-to-r from-orange-50 to-pink-50 p-6 rounded-2xl shadow-sm">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-800">My Subscription</h3>
+                                <p className="text-sm text-gray-600 mt-1">
+                                    You are currently on the <span className="font-bold">{isPro ? 'Pro Plan' : 'Free Plan'}</span>.
+                                </p>
+                            </div>
+                            {!isPro && (
+                                <button
+                                    onClick={openUpgradeModal}
+                                    className="px-6 py-2 bg-orange-500 text-white font-semibold rounded-md hover:bg-orange-600 transition-colors shadow-sm w-full sm:w-auto flex items-center justify-center"
+                                >
+                                    <SparklesIcon />
+                                    <span className="ml-2">Upgrade to Pro</span>
+                                </button>
+                            )}
+                        </div>
                     </div>
 
 

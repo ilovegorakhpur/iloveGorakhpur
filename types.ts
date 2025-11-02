@@ -28,6 +28,7 @@ export interface User {
     name: string;
     email: string;
     avatarUrl?: string;
+    subscriptionTier?: 'free' | 'pro';
     notificationPreferences?: {
         newPosts: boolean;
         newEvents: boolean;

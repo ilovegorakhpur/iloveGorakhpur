@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useMemo } from 'react';
 import type { User, Bookmark } from '../types';
 import usePersistentState from '../hooks/usePersistentState';
 
@@ -8,8 +8,13 @@ type AuthModalView = 'login' | 'register';
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
+  isPro: boolean;
   isAuthModalOpen: boolean;
   authModalView: AuthModalView;
+  isUpgradeModalOpen: boolean;
+  openUpgradeModal: () => void;
+  closeUpgradeModal: () => void;
+  upgradeToPro: () => void;
   loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
   registerWithEmail: (name: string, email: string, pass: string) => Promise<void>;
@@ -33,6 +38,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalView, setAuthModalView] = useState<AuthModalView>('login');
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   const openAuthModal = (view: AuthModalView) => {
     setAuthModalView(view);
@@ -43,6 +49,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const switchToLogin = () => setAuthModalView('login');
   const switchToRegister = () => setAuthModalView('register');
   
+  const openUpgradeModal = () => setIsUpgradeModalOpen(true);
+  const closeUpgradeModal = () => setIsUpgradeModalOpen(false);
+
   // Mock login with Google
   const loginWithGoogle = (): Promise<void> => {
     return new Promise((resolve) => {
@@ -53,6 +62,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           name: 'Chandra Prakash',
           email: 'chandra.prakash@example.com',
           avatarUrl: `https://i.pravatar.cc/150?u=12345`,
+          subscriptionTier: 'pro', // This user is a Pro member
           notificationPreferences: {
             newPosts: true,
             newEvents: true,
@@ -76,6 +86,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             id: '67890',
             name: 'Priya Sharma',
             email: 'test@example.com',
+            subscriptionTier: 'free', // This user is a Free member
             notificationPreferences: {
                 newPosts: true,
                 newEvents: false,
@@ -102,6 +113,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           id: String(Date.now()),
           name: name,
           email: email,
+          subscriptionTier: 'free', // New users start on the free tier
           notificationPreferences: {
             newPosts: true,
             newEvents: true,
@@ -121,8 +133,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateNotificationPreferences = (prefs: { newPosts: boolean; newEvents: boolean; }) => {
     if (user) {
-        // This simulates updating the user's profile on a server.
-        // With usePersistentState, it will also save to localStorage.
         setUser({ ...user, notificationPreferences: prefs });
     }
   };
@@ -139,12 +149,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return bookmarks.some(b => b.type === bookmark.type && b.itemId === bookmark.itemId);
   };
 
+  const upgradeToPro = () => {
+    if (user) {
+        setUser({ ...user, subscriptionTier: 'pro' });
+        // In a real app, this would be handled after a successful payment webhook.
+        alert('Congratulations! You are now an iLoveGorakhpur Pro member.');
+    }
+  };
+  
+  const isPro = useMemo(() => user?.subscriptionTier === 'pro', [user]);
 
   const value = {
     user,
     isLoading,
+    isPro,
     isAuthModalOpen,
     authModalView,
+    isUpgradeModalOpen,
+    openUpgradeModal,
+    closeUpgradeModal,
+    upgradeToPro,
     loginWithGoogle,
     loginWithEmail,
     registerWithEmail,

@@ -20,11 +20,12 @@ import ProfilePage from './components/ProfilePage';
 import MapView from './components/MapView';
 import GorakhpurExplained from './components/GorakhpurExplained';
 import { initializeFirebase, requestNotificationPermission } from './utils/firebase';
+import UpgradeModal from './components/UpgradeModal';
 
 export type ModalContentType = 'terms' | 'privacy' | 'about' | 'contact';
 
 const App: React.FC = () => {
-  const { user, isAuthModalOpen } = useAuth();
+  const { user, isAuthModalOpen, isUpgradeModalOpen } = useAuth();
   const { isCartOpen } = useCart();
   const [notificationsRequested, setNotificationsRequested] = useState(false);
   const [legalModalContent, setLegalModalContent] = useState<ModalContentType | null>(null);
@@ -76,6 +77,7 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       {isAuthModalOpen && <AuthModal />}
+      {isUpgradeModalOpen && <UpgradeModal />}
       {isCartOpen && <CartModal />}
       {legalModalContent && <LegalModal content={legalModalContent} onClose={closeLegalModal} />}
       <Header onShowLegal={openLegalModal} />
