@@ -5,25 +5,40 @@
  * This source code is licensed under the BSD-style license found in the
  * LICENSE file in the root directory of this source tree. 
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { generateItinerary } from '../services/geminiService';
 import type { Itinerary } from '../types';
-import { CalendarIcon, LoadingIcon } from './icons';
+import { CalendarIcon, LoadingIcon, ShareIcon, BookmarkIcon } from './icons';
 import { useAuth } from '../context/AuthContext';
 import usePersistentState from '../hooks/usePersistentState';
+import { shareContent } from '../utils/share';
 
 const ItineraryPlanner: React.FC = () => {
-  const { isPro, openUpgradeModal, user } = useAuth();
+  const { isPro, openUpgradeModal, user, saveItinerary, removeItinerary, isItinerarySaved, openAuthModal } = useAuth();
   const [duration, setDuration] = useState('1 Day');
   const [interests, setInterests] = useState<string[]>([]);
   const [budget, setBudget] = useState('Mid-range');
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shareStatus, setShareStatus] = useState('');
 
   const [freeGenerationsLeft, setFreeGenerationsLeft] = usePersistentState<number>('itineraryGenerationsCount', 2);
   
   const interestOptions = ['History', 'Food', 'Nature', 'Shopping', 'Spiritual', 'Art & Culture'];
+
+  const tripIdeas = [
+      { name: "Foodie Weekend", duration: "Weekend (2 Days)", interests: ["Food", "Shopping"], budget: "Mid-range" },
+      { name: "Spiritual Retreat", duration: "1 Day", interests: ["Spiritual", "History"], budget: "Budget-friendly" },
+      { name: "Historical Tour", duration: "3 Days", interests: ["History", "Art & Culture"], budget: "Mid-range" },
+  ];
+  
+  useEffect(() => {
+    if (shareStatus) {
+        const timer = setTimeout(() => setShareStatus(''), 3000);
+        return () => clearTimeout(timer);
+    }
+  }, [shareStatus]);
 
   const handleInterestChange = (interest: string) => {
     setInterests((prev) =>
@@ -31,6 +46,12 @@ const ItineraryPlanner: React.FC = () => {
         ? prev.filter((i) => i !== interest)
         : [...prev, interest]
     );
+  };
+
+  const handleTripIdeaClick = (idea: typeof tripIdeas[0]) => {
+      setDuration(idea.duration);
+      setInterests(idea.interests);
+      setBudget(idea.budget);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,7 +72,8 @@ const ItineraryPlanner: React.FC = () => {
     setItinerary(null);
     try {
       const result = await generateItinerary(duration, interests, budget);
-      setItinerary(result);
+      const resultWithId = { ...result, id: Date.now() };
+      setItinerary(resultWithId);
       if (!isPro) {
           setFreeGenerationsLeft(prev => prev - 1);
       }
@@ -59,6 +81,38 @@ const ItineraryPlanner: React.FC = () => {
       setError(err.message || 'Failed to generate itinerary. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleShare = async () => {
+      if (!itinerary) return;
+      let text = `${itinerary.title}\n${itinerary.summary}\n\n`;
+      itinerary.plan.forEach(day => {
+          text += `Day ${day.day}: ${day.title}\n`;
+          day.activities.forEach(act => {
+              text += `- ${act.time}: ${act.activity}\n`;
+          });
+          text += '\n';
+      });
+      const status = await shareContent({
+          title: `My Gorakhpur Itinerary: ${itinerary.title}`,
+          text: text,
+          url: window.location.href + '#itinerary-planner'
+      });
+      setShareStatus(status);
+  };
+  
+  const handleSaveToggle = () => {
+    if (!user) {
+        openAuthModal('login');
+        return;
+    }
+    if (!itinerary || !itinerary.id) return;
+    
+    if (isItinerarySaved(itinerary.id)) {
+        removeItinerary(itinerary.id);
+    } else {
+        saveItinerary(itinerary);
     }
   };
   
@@ -132,6 +186,18 @@ const ItineraryPlanner: React.FC = () => {
               </div>
                {error && <p className="text-sm text-red-600 text-center mt-4">{error}</p>}
             </form>
+            
+             <div className="mt-8 pt-6 border-t border-gray-200">
+                <p className="text-center text-sm font-semibold text-gray-700 mb-4">Need some inspiration?</p>
+                <div className="flex flex-wrap justify-center gap-3">
+                    {tripIdeas.map(idea => (
+                        <button key={idea.name} onClick={() => handleTripIdeaClick(idea)} className="px-5 py-2 bg-orange-100 text-orange-800 text-sm font-medium rounded-full hover:bg-orange-200 transition-colors">
+                            {idea.name}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             {user && !isPro && (
                 <div className="text-center mt-6">
                     <p className="text-sm text-gray-600">You have <span className="font-bold text-orange-600">{freeGenerationsLeft} free itinerary generation{freeGenerationsLeft !== 1 ? 's' : ''}</span> left. <button onClick={openUpgradeModal} className="font-semibold text-blue-600 hover:underline">Upgrade to Pro</button> for unlimited plans.</p>
@@ -171,10 +237,21 @@ const ItineraryPlanner: React.FC = () => {
                     </div>
                   ))}
                 </div>
+                 <div className="mt-10 pt-6 border-t border-gray-200 flex flex-col sm:flex-row justify-center items-center gap-4">
+                    <button onClick={handleShare} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gray-700 text-white font-semibold rounded-lg hover:bg-gray-800 transition-colors">
+                        <ShareIcon />
+                        <span>Share Plan</span>
+                    </button>
+                    <button onClick={handleSaveToggle} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition-colors">
+                        <BookmarkIcon className={`h-5 w-5 ${itinerary.id && isItinerarySaved(itinerary.id) ? 'fill-current' : ''}`} />
+                        <span>{itinerary.id && isItinerarySaved(itinerary.id) ? 'Saved' : 'Save to Profile'}</span>
+                    </button>
+                </div>
               </div>
             )}
           </div>
         </div>
+         {shareStatus && <div className="fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm">{shareStatus}</div>}
       </div>
     </section>
   );

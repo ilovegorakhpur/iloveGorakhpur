@@ -82,9 +82,12 @@ export interface DayPlan {
 }
 
 export interface Itinerary {
+  id?: number;
   title: string;
   summary: string;
   plan: DayPlan[];
+  isCompleted?: boolean;
+  isLiked?: boolean;
 }
 
 // New type for Local Services Directory

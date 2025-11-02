@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree. 
  */
 import React, { createContext, useState, useContext, ReactNode, useMemo } from 'react';
-import type { User, Bookmark } from '../types';
+import type { User, Bookmark, Itinerary } from '../types';
 import usePersistentState from '../hooks/usePersistentState';
 
 type AuthModalView = 'login' | 'register';
@@ -30,10 +30,17 @@ interface AuthContextType {
   switchToLogin: () => void;
   switchToRegister: () => void;
   updateNotificationPreferences: (prefs: { newPosts: boolean; newEvents: boolean; }) => void;
+  updateUserProfile: (updatedData: { name: string; avatarUrl?: string; }) => void;
   bookmarks: Bookmark[];
   addBookmark: (bookmark: Bookmark) => void;
   removeBookmark: (bookmark: Bookmark) => void;
   isBookmarked: (bookmark: Bookmark) => boolean;
+  savedItineraries: Itinerary[];
+  saveItinerary: (itinerary: Itinerary) => void;
+  removeItinerary: (itineraryId: number) => void;
+  isItinerarySaved: (itineraryId: number) => boolean;
+  toggleItineraryCompleted: (itineraryId: number) => void;
+  toggleItineraryLiked: (itineraryId: number) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,6 +48,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = usePersistentState<User | null>('user', null);
   const [bookmarks, setBookmarks] = usePersistentState<Bookmark[]>('bookmarks', []);
+  const [savedItineraries, setSavedItineraries] = usePersistentState<Itinerary[]>('savedItineraries', []);
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalView, setAuthModalView] = useState<AuthModalView>('login');
@@ -143,6 +151,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const updateUserProfile = (updatedData: { name: string; avatarUrl?: string; }) => {
+    if (user) {
+        setUser(currentUser => {
+            if (!currentUser) return null;
+            return {
+                ...currentUser,
+                name: updatedData.name,
+                // Only update avatar if a new one is provided
+                avatarUrl: updatedData.avatarUrl ?? currentUser.avatarUrl,
+            };
+        });
+    }
+  };
+
   const addBookmark = (bookmark: Bookmark) => {
       setBookmarks(prev => [...prev, bookmark]);
   };
@@ -153,6 +175,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const isBookmarked = (bookmark: Bookmark): boolean => {
       return bookmarks.some(b => b.type === bookmark.type && b.itemId === bookmark.itemId);
+  };
+
+  const saveItinerary = (itinerary: Itinerary) => {
+    if (!itinerary.id) return;
+    const itineraryToSave = { ...itinerary, isCompleted: false, isLiked: false };
+    setSavedItineraries(prev => [...prev.filter(i => i.id !== itinerary.id), itineraryToSave]);
+  };
+
+  const removeItinerary = (itineraryId: number) => {
+      setSavedItineraries(prev => prev.filter(i => i.id !== itineraryId));
+  };
+
+  const isItinerarySaved = (itineraryId: number): boolean => {
+      return savedItineraries.some(i => i.id === itineraryId);
+  };
+
+  const toggleItineraryCompleted = (itineraryId: number) => {
+    setSavedItineraries(prev => 
+        prev.map(i => 
+            i.id === itineraryId ? { ...i, isCompleted: !(i.isCompleted ?? false) } : i
+        )
+    );
+  };
+
+  const toggleItineraryLiked = (itineraryId: number) => {
+      setSavedItineraries(prev => 
+          prev.map(i => 
+              i.id === itineraryId ? { ...i, isLiked: !(i.isLiked ?? false) } : i
+          )
+      );
   };
 
   const upgradeToPro = () => {
@@ -184,10 +236,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     switchToLogin,
     switchToRegister,
     updateNotificationPreferences,
+    updateUserProfile,
     bookmarks,
     addBookmark,
     removeBookmark,
     isBookmarked,
+    savedItineraries,
+    saveItinerary,
+    removeItinerary,
+    isItinerarySaved,
+    toggleItineraryCompleted,
+    toggleItineraryLiked,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

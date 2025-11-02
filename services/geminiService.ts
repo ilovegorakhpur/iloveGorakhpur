@@ -414,3 +414,28 @@
             return "Sorry, an unknown error occurred while fetching information.";
         }
     };
+
+    export const generateProfileSuggestions = async (activitySummary: string): Promise<string> => {
+        const prompt = `You are the 'Gorakhpur Guide', a friendly and insightful local expert. Based on the user's activity within the iLoveGorakhpur app, provide 3 personalized and actionable suggestions for them to explore. The suggestions should be encouraging and directly reference sections of the app like the Marketplace, Community Bulletin, or Itinerary Planner.
+
+    User's Activity Summary:
+    ${activitySummary}
+
+    Provide the response as a markdown list. For example:
+    * **Explore local workshops:** Since you've shown interest in [Topic], you might love the Terracotta Workshop happening this weekend. Check it out in the Marketplace!
+    * **Connect with the community:** You posted about [Topic]. Why not start a discussion about it on the Community Bulletin board?
+    `;
+        try {
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+            });
+            return response.text;
+        } catch (error) {
+            console.error("Error generating profile suggestions:", error);
+            if (error instanceof Error) {
+                return `Sorry, I couldn't generate suggestions right now. Error: ${error.message}`;
+            }
+            return "Sorry, an unknown error occurred while generating suggestions.";
+        }
+    };
