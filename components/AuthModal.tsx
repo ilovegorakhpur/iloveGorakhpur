@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { GoogleIcon, XIcon, EyeIcon, EyeOffIcon, LoadingIcon } from './icons';
+import { GoogleIcon, XIcon, EyeIcon, EyeOffIcon, LoadingIcon, ExclamationCircleIcon } from './icons';
 
 const AuthModal: React.FC = () => {
   const {
@@ -131,7 +131,12 @@ const AuthModal: React.FC = () => {
               </div>
             </div>
 
-            {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-sm text-red-800 rounded-lg p-3 flex items-center animate-fade-in-up">
+                <ExclamationCircleIcon className="h-5 w-5 mr-3 flex-shrink-0 text-red-500" />
+                <p>{error}</p>
+              </div>
+            )}
 
             <button
               type="submit"

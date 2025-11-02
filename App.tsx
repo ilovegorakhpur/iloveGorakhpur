@@ -9,6 +9,7 @@ import AIAssistant from './components/AIAssistant';
 import Footer from './components/Footer';
 import AuthModal from './components/AuthModal';
 import CartModal from './components/CartModal';
+import LegalModal from './components/LegalModal';
 import { useAuth } from './context/AuthContext';
 import { useCart } from './context/CartContext';
 import { NewspaperIcon, ServicesIcon, ShoppingCartIcon } from './components/icons';
@@ -18,10 +19,16 @@ import Marketplace from './components/Marketplace';
 import ProfilePage from './components/ProfilePage';
 import { initializeFirebase, requestNotificationPermission } from './utils/firebase';
 
+export type ModalContentType = 'terms' | 'privacy' | 'about' | 'contact';
+
 const App: React.FC = () => {
   const { user, isAuthModalOpen } = useAuth();
   const { isCartOpen } = useCart();
   const [notificationsRequested, setNotificationsRequested] = useState(false);
+  const [legalModalContent, setLegalModalContent] = useState<ModalContentType | null>(null);
+
+  const openLegalModal = (content: ModalContentType) => setLegalModalContent(content);
+  const closeLegalModal = () => setLegalModalContent(null);
   
   const features = [
     {
@@ -68,7 +75,8 @@ const App: React.FC = () => {
     <div className="flex flex-col min-h-screen bg-gray-50">
       {isAuthModalOpen && <AuthModal />}
       {isCartOpen && <CartModal />}
-      <Header />
+      {legalModalContent && <LegalModal content={legalModalContent} onClose={closeLegalModal} />}
+      <Header onShowLegal={openLegalModal} />
       <main className="flex-grow">
         <Hero />
         <section id="features" className="py-16 sm:py-24 bg-white">
@@ -97,7 +105,7 @@ const App: React.FC = () => {
         <CommunityBulletin />
         <AIAssistant />
       </main>
-      <Footer />
+      <Footer onShowLegal={openLegalModal} />
     </div>
   );
 };

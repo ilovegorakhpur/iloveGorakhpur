@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import type { Article } from '../types';
-import { NewspaperIcon, SummarizeIcon, ShareIcon } from './icons';
+import { NewspaperIcon, SummarizeIcon, ShareIcon, XIcon } from './icons';
 import { summarizeText } from '../services/geminiService';
 import { shareContent } from '../utils/share';
 
@@ -29,7 +29,7 @@ const mockArticles: Article[] = [
   },
 ];
 
-const ArticleCard: React.FC<{ article: Article, setShareStatus: (status: string) => void }> = ({ article, setShareStatus }) => {
+const ArticleCard: React.FC<{ article: Article, setShareStatus: (status: string) => void, onReadMore: (article: Article) => void }> = ({ article, setShareStatus, onReadMore }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [summary, setSummary] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -73,7 +73,7 @@ const ArticleCard: React.FC<{ article: Article, setShareStatus: (status: string)
                 )}
                 {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
                 <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
-                    <a href="#" className="text-sm font-semibold text-orange-600 hover:text-orange-500">Read More</a>
+                    <button onClick={() => onReadMore(article)} className="text-sm font-semibold text-orange-600 hover:text-orange-500">Read More</button>
                     <div className="flex items-center space-x-1">
                         <button
                             onClick={handleShare}
@@ -109,6 +109,7 @@ const ArticleCard: React.FC<{ article: Article, setShareStatus: (status: string)
 
 const LocalNews: React.FC = () => {
   const [shareStatus, setShareStatus] = useState('');
+  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
 
   useEffect(() => {
     if (shareStatus) {
@@ -130,9 +131,37 @@ const LocalNews: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {mockArticles.map(article => (
-            <ArticleCard key={article.id} article={article} setShareStatus={setShareStatus} />
+            <ArticleCard key={article.id} article={article} setShareStatus={setShareStatus} onReadMore={setSelectedArticle} />
           ))}
         </div>
+
+        {selectedArticle && (
+            <div 
+                className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" 
+                onClick={() => setSelectedArticle(null)}
+            >
+                <div 
+                    className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="flex items-start justify-between p-6 border-b">
+                        <h2 className="text-2xl font-bold text-gray-900">{selectedArticle.title}</h2>
+                        <button
+                            onClick={() => setSelectedArticle(null)}
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                            aria-label="Close article"
+                        >
+                            <XIcon />
+                        </button>
+                    </div>
+                    <div className="p-6 overflow-y-auto">
+                        <img className="h-64 w-full object-cover rounded-lg mb-6" src={selectedArticle.imageUrl.replace('400/250', '800/400')} alt={selectedArticle.title} />
+                        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{selectedArticle.content}</p>
+                    </div>
+                </div>
+            </div>
+        )}
+
         {shareStatus && <div className="fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm">{shareStatus}</div>}
       </div>
     </section>

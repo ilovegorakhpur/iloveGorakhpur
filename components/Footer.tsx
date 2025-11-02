@@ -1,8 +1,13 @@
 
 import React from 'react';
 import { TwitterIcon, FacebookIcon, InstagramIcon } from './icons';
+import type { ModalContentType } from '../App';
 
-const Footer: React.FC = () => {
+interface FooterProps {
+  onShowLegal: (content: ModalContentType) => void;
+}
+
+const Footer: React.FC<FooterProps> = ({ onShowLegal }) => {
   return (
     <footer id="about" className="bg-gray-800 text-white">
       <div className="container mx-auto px-4 py-10">
@@ -21,9 +26,11 @@ const Footer: React.FC = () => {
             <div className="mb-4 sm:mb-0">
                 &copy; {new Date().getFullYear()} iLoveGorakhpur. All Rights Reserved.
             </div>
-            <div className="flex space-x-6">
-                <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-                <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+                <button onClick={() => onShowLegal('about')} className="hover:text-white transition-colors">About Us</button>
+                <button onClick={() => onShowLegal('contact')} className="hover:text-white transition-colors">Contact Us</button>
+                <button onClick={() => onShowLegal('terms')} className="hover:text-white transition-colors">Terms of Service</button>
+                <button onClick={() => onShowLegal('privacy')} className="hover:text-white transition-colors">Privacy Policy</button>
             </div>
         </div>
       </div>

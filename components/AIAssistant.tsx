@@ -1,8 +1,7 @@
 
 
-
 import React, { useState, useRef, useEffect } from 'react';
-import { askGorakhpurGuide } from '../services/geminiService';
+import { askGorakhpurGuideStream } from '../services/geminiService';
 import { SparklesIcon, SendIcon, LocationPinIcon, MicrophoneIcon } from './icons';
 import type { Message, Location } from '../types';
 import { useContent } from '../context/ContentContext';
@@ -18,6 +17,7 @@ const AIAssistant: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showThinking, setShowThinking] = useState(false);
   const [isThinkingMode, setIsThinkingMode] = useState(false);
   const [location, setLocation] = useState<Location | null>(null);
   const [isLocationEnabled, setIsLocationEnabled] = useState(false);
@@ -31,7 +31,7 @@ const AIAssistant: React.FC = () => {
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
+  }, [messages, isLoading, showThinking]);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -60,24 +60,61 @@ const AIAssistant: React.FC = () => {
 
     recognitionRef.current = recognition;
   }, []);
-  
+
   const sendMessage = async (message: string) => {
     if (!message.trim() || isLoading) return;
 
     const userMessage: Message = { role: 'user', content: message };
     setMessages(prev => [...prev, userMessage]);
+    
     setQuery('');
     setIsLoading(true);
+    setShowThinking(true);
 
+    let firstChunk = true;
     try {
-      const { text, groundingChunks } = await askGorakhpurGuide(message, events, services, products, isThinkingMode, location);
-      const modelMessage: Message = { role: 'model', content: text, groundingChunks };
-      setMessages(prev => [...prev, modelMessage]);
+      const stream = askGorakhpurGuideStream(message, events, services, products, isThinkingMode, location);
+      
+      let fullResponse = "";
+      let groundingChunks: any[] | undefined;
+
+      for await (const chunk of stream) {
+        if (firstChunk) {
+          setShowThinking(false);
+          setMessages(prev => [...prev, { role: 'model', content: '' }]);
+          firstChunk = false;
+        }
+
+        fullResponse += chunk.text;
+        if(chunk.groundingChunks) {
+            groundingChunks = chunk.groundingChunks;
+        }
+
+        setMessages(prev => {
+            const newMessages = [...prev];
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage.role === 'model') {
+                lastMessage.content = fullResponse;
+                lastMessage.groundingChunks = groundingChunks;
+            }
+            return newMessages;
+        });
+      }
     } catch (err: any) {
-      const errorMessage: Message = { role: 'model', content: err.message || 'An unexpected error occurred.' };
-      setMessages(prev => [...prev, errorMessage]);
+        const errorMessage: Message = { role: 'model', content: err.message || 'An unexpected error occurred.' };
+        if (firstChunk) {
+            setShowThinking(false);
+            setMessages(prev => [...prev, errorMessage]);
+        } else {
+            setMessages(prev => {
+                const newMessages = [...prev];
+                newMessages[newMessages.length - 1] = errorMessage;
+                return newMessages;
+            });
+        }
     } finally {
       setIsLoading(false);
+      setShowThinking(false);
     }
   };
 
@@ -136,19 +173,9 @@ const AIAssistant: React.FC = () => {
     }
   };
   
-  const examplePrompts = [
-    "गोरखपुर में घूमने के लिए शीर्ष 5 स्थान कौन से हैं?",
-    "इस सप्ताह के अंत में कौन से कार्यक्रम हो रहे हैं?",
-    "मुझे एक अच्छा इलेक्ट्रीशियन कहां मिल सकता है?",
-    "स्थानीय हस्तशिल्प खरीदने के लिए सबसे अच्छी जगह कौन सी है?",
-  ];
-
-  const handleExampleClick = (prompt: string) => {
-    sendMessage(prompt);
-  };
-  
   const ChatMessage: React.FC<{ message: Message }> = ({ message }) => {
     const isUser = message.role === 'user';
+
     return (
       <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in-up`}>
         <div 
@@ -188,6 +215,33 @@ const AIAssistant: React.FC = () => {
     );
   };
 
+  const examplePrompts = [
+    "What are some good places to eat near me?",
+    "Are there any music events happening this weekend?",
+    "Tell me about the history of the Gorakhnath Temple."
+  ];
+
+  const InitialPrompts: React.FC<{ onPromptClick: (prompt: string) => void }> = ({ onPromptClick }) => (
+      <div className="flex flex-col items-center justify-center h-full text-center p-4">
+          <div className="text-orange-500">
+             <SparklesIcon />
+          </div>
+          <h3 className="mt-4 text-xl font-semibold text-gray-800">Ask me anything!</h3>
+          <p className="mt-1 text-sm text-gray-500">I'm your personal guide to Gorakhpur.</p>
+          <div className="mt-6 space-y-2 w-full max-w-sm">
+              {examplePrompts.map((prompt, i) => (
+                  <button 
+                      key={i} 
+                      onClick={() => onPromptClick(prompt)}
+                      className="w-full text-left p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm text-gray-700"
+                  >
+                      {prompt}
+                  </button>
+              ))}
+          </div>
+      </div>
+  );
+
   return (
     <section id="ai-assistant" className="py-16 sm:py-24 bg-gray-50">
       <div className="container mx-auto px-4">
@@ -201,14 +255,21 @@ const AIAssistant: React.FC = () => {
         
         <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg flex flex-col h-[75vh]">
           <div className="flex-grow p-4 sm:p-6 overflow-y-auto space-y-4 bg-gray-50">
-            {messages.map((msg, index) => (
-              <ChatMessage key={index} message={msg} />
-            ))}
-            {isLoading && (
+            {messages.length === 0 && !isLoading ? (
+                <InitialPrompts onPromptClick={sendMessage} />
+            ) : (
+                messages.map((msg, index) => (
+                    <ChatMessage key={index} message={msg} />
+                ))
+            )}
+            
+            {showThinking && (
               <div className="flex justify-start animate-fade-in-up">
                 <div className="max-w-md lg:max-w-2xl px-4 py-3 rounded-2xl bg-gray-100 text-gray-800 rounded-bl-none shadow-sm">
                   <div className="flex items-center space-x-2">
-                    <span className="text-sm sm:text-base font-medium text-gray-600">{isThinkingMode ? "Thinking deeply..." : "Thinking..."}</span>
+                    {isThinkingMode && (
+                        <span className="text-sm sm:text-base font-medium text-gray-600">Thinking deeply...</span>
+                    )}
                     <div className="flex space-x-1">
                       <span className="h-2 w-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
                       <span className="h-2 w-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
@@ -220,24 +281,6 @@ const AIAssistant: React.FC = () => {
             )}
             <div ref={chatEndRef} />
           </div>
-
-          {messages.length === 0 && !isLoading && (
-             <div className="p-4 sm:p-6 border-t border-gray-200 bg-white">
-                <p className="text-sm text-center font-semibold text-gray-600 mb-3">Or try one of these examples to start:</p>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {examplePrompts.map(prompt => (
-                    <button
-                      key={prompt}
-                      onClick={() => handleExampleClick(prompt)}
-                      disabled={isLoading}
-                      className="px-3 py-1 bg-orange-100 text-orange-800 text-xs sm:text-sm rounded-full hover:bg-orange-200 transition-colors disabled:opacity-50"
-                    >
-                      {prompt}
-                    </button>
-                  ))}
-                </div>
-            </div>
-          )}
 
           <div className="p-4 sm:p-6 border-t border-gray-200 bg-gray-100/50 rounded-b-2xl">
             <div className="grid grid-cols-2 gap-4 mb-4">
@@ -276,7 +319,7 @@ const AIAssistant: React.FC = () => {
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder={isListening ? "Listening..." : (messages.length > 0 ? "Ask a follow-up question..." : "Ask your first question...")}
+                  placeholder={isListening ? "Listening..." : "Ask your question here..."}
                   className="w-full p-4 pr-28 text-gray-700 bg-white rounded-full border-2 border-gray-200 focus:border-orange-500 focus:ring-orange-500 focus:outline-none transition-all"
                   disabled={isLoading}
                   autoComplete="off"

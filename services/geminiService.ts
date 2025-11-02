@@ -1,18 +1,21 @@
 
 
-
-    import { GoogleGenAI, Chat, GenerateContentResponse, Type, FunctionDeclaration } from "@google/genai";
+    import { GoogleGenAI, Chat, GenerateContentResponse, Type, FunctionDeclaration, FunctionCall } from "@google/genai";
     import type { Location, Itinerary, LocalEvent, ServiceListing, Product } from '../types';
 
-    const SYSTEM_INSTRUCTION = `You are a helpful and enthusiastic tour guide for the city of Gorakhpur, India. Your name is 'Gorakhpur Guide'. Provide detailed, friendly, and positive information about the city. Answer questions about its history, culture, food, famous places, and current events. Always maintain a positive and proud tone about Gorakhpur. 
-    
-    New Features:
-    - You can encourage users to connect on the Community Bulletin Board for discussions.
-    - If a user asks for a recommendation for a service (like a plumber, electrician, etc.), you should use the 'findLocalServices' tool to look up specific, verified professionals. If no specific service is found, guide them to check out the 'Verified Local Services' directory in the app.
-    - Crucially, if a user asks about buying tickets for events, or wants to shop for local goods (like handicrafts, terracotta, etc.), you SHOULD use the 'findLocalProducts' tool to find specific items. If no specific items are found, direct them to the 'Gorakhpur Marketplace' section of the app.
-    - You can now find local events for users! If a user asks for event recommendations, use the 'findLocalEvents' tool to get a list of relevant events. You can filter by interest and date. When presenting the events, format them nicely in a list and mention that more details can be found in the Marketplace.
-    
-    Format your answers clearly, using markdown for headings, lists, and bold text where appropriate. When asked for nearby places, use the provided location data to give relevant suggestions.`;
+    const SYSTEM_INSTRUCTION = `You are the 'Gorakhpur Guide', a friendly, knowledgeable, and passionate local expert for the city of Gorakhpur, India. Your personality is warm, welcoming, and you are always excited to share the best of your city. Think of yourself as a personal friend showing a visitor around.
+
+**Behavioral Rules:**
+- **Tone:** Always maintain a proud and positive tone about Gorakhpur. Be enthusiastic and helpful.
+- **Proactive Suggestions:** If a user's query is broad (e.g., "what's there to do?"), proactively suggest a couple of options based on common interests (like food, history, or shopping) and ask them what they'd prefer to know more about.
+- **Formatting:** Use markdown for clear formatting (headings, lists, bold text). Make your answers easy to read.
+- **Location Awareness:** When using location data for nearby suggestions, mention that you're using their location to give personalized recommendations.
+
+**Tool Usage Rules:**
+- For event recommendations, use the 'findLocalEvents' tool. Format the results in a friendly list and tell users they can find more details in the Marketplace.
+- For professional services (plumbers, electricians, etc.), use the 'findLocalServices' tool to find verified experts. If you can't find one, suggest they browse the 'Verified Local Services' section.
+- For shopping queries about local specialties (like terracotta, handicrafts), use the 'findLocalProducts' tool. If nothing specific matches, guide them to the 'Gorakhpur Marketplace'.
+- When relevant, encourage users to connect with locals on the 'Community Bulletin Board' for more personal recommendations or discussions.`;
     
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
@@ -73,7 +76,7 @@
     };
 
     const getChatSession = (isThinkingMode: boolean, location: Location | null): Chat => {
-      const modelName = isThinkingMode ? "gemini-2.5-pro" : "gemini-2.5-flash";
+      const modelName = isThinkingMode ? "gemini-2.5-pro" : "gemini-2.5-flash-lite";
       const locationKey = location ? 'with-location' : 'no-location';
       const toolsKey = 'with-events-services-products-tool'; // A key to represent the tool configuration
       const newConfigKey = `${modelName}-${locationKey}-${toolsKey}`;
@@ -177,72 +180,78 @@
             .filter(p => p.category.toLowerCase().includes(lowerProductType) || p.name.toLowerCase().includes(lowerProductType));
     };
 
-    export const askGorakhpurGuide = async (prompt: string, allEvents: LocalEvent[], allServices: ServiceListing[], allProducts: Product[], isThinkingMode: boolean = false, location: Location | null = null): Promise<{ text: string; groundingChunks?: any[] }> => {
-      try {
-        const chatSession = getChatSession(isThinkingMode, location);
-        
-        let response: GenerateContentResponse = await chatSession.sendMessage({ message: prompt });
-        
-        const functionCalls = response.functionCalls;
-        
-        if (functionCalls && functionCalls.length > 0) {
-            const call = functionCalls[0];
-            if (call.name === 'findLocalEvents') {
-                const { interest, dateRange } = call.args;
+    export async function* askGorakhpurGuideStream(
+        prompt: string, 
+        allEvents: LocalEvent[], 
+        allServices: ServiceListing[], 
+        allProducts: Product[], 
+        isThinkingMode: boolean = false, 
+        location: Location | null = null
+    ): AsyncGenerator<{ text: string; groundingChunks?: any[] }> {
+        try {
+            const chatSession = getChatSession(isThinkingMode, location);
+            
+            const initialStream = await chatSession.sendMessageStream({ message: prompt });
+    
+            let collectedFunctionCalls: FunctionCall[] = [];
+            let textStreamStarted = false;
 
-                const recommendedEvents = filterEvents(allEvents, interest, dateRange);
-
-                const simplifiedEvents = recommendedEvents.map(({ title, date, location, category, price }) => ({ title, date, location, category, price }));
-
-                response = await chatSession.sendMessage({
-                  toolResponses: [{
-                    id: call.id,
-                    name: call.name,
-                    response: { events: simplifiedEvents },
-                  }]
-                });
-            } else if (call.name === 'findLocalServices') {
-                const { serviceType } = call.args;
-
-                const recommendedServices = filterServices(allServices, serviceType);
-                
-                // Only return top 3 verified services to keep the response concise
-                const topVerifiedServices = recommendedServices.filter(s => s.isVerified).slice(0, 3);
-                
-                const simplifiedServices = topVerifiedServices.map(({ name, category, rating, phone }) => ({ name, category, rating, phone }));
-
-                response = await chatSession.sendMessage({
-                  toolResponses: [{
-                    id: call.id,
-                    name: call.name,
-                    response: { services: simplifiedServices },
-                  }]
-                });
-            } else if (call.name === 'findLocalProducts') {
-                const { productType } = call.args;
-                const recommendedProducts = filterProducts(allProducts, productType);
-                const simplifiedProducts = recommendedProducts.slice(0, 5).map(({ name, price, seller, category }) => ({ name, price, seller, category }));
-        
-                response = await chatSession.sendMessage({
-                    toolResponses: [{
-                        id: call.id,
-                        name: call.name,
-                        response: { products: simplifiedProducts },
-                    }]
-                });
+            // First pass: Handle initial text response and collect function calls
+            for await (const chunk of initialStream) {
+                if (chunk.text) {
+                    textStreamStarted = true;
+                    yield { text: chunk.text, groundingChunks: chunk.candidates?.[0]?.groundingMetadata?.groundingChunks };
+                }
+                const functionCalls = chunk.functionCalls;
+                if (functionCalls && functionCalls.length > 0) {
+                    collectedFunctionCalls.push(...functionCalls);
+                }
+            }
+    
+            // If function calls were collected, process them and get the final response
+            if (collectedFunctionCalls.length > 0) {
+                const toolResponses = collectedFunctionCalls.map(call => {
+                    if (call.name === 'findLocalEvents') {
+                        const { interest, dateRange } = call.args;
+                        const recommendedEvents = filterEvents(allEvents, interest, dateRange);
+                        const simplifiedEvents = recommendedEvents.map(({ title, date, location, category, price }) => ({ title, date, location, category, price }));
+                        return { id: call.id, name: call.name, response: { events: simplifiedEvents } };
+                    } else if (call.name === 'findLocalServices') {
+                        const { serviceType } = call.args;
+                        const recommendedServices = filterServices(allServices, serviceType);
+                        const topVerifiedServices = recommendedServices.filter(s => s.isVerified).slice(0, 3);
+                        const simplifiedServices = topVerifiedServices.map(({ name, category, rating, phone }) => ({ name, category, rating, phone }));
+                        return { id: call.id, name: call.name, response: { services: simplifiedServices } };
+                    } else if (call.name === 'findLocalProducts') {
+                        const { productType } = call.args;
+                        const recommendedProducts = filterProducts(allProducts, productType);
+                        const simplifiedProducts = recommendedProducts.slice(0, 5).map(({ name, price, seller, category }) => ({ name, price, seller, category }));
+                        return { id: call.id, name: call.name, response: { products: simplifiedProducts } };
+                    }
+                    return null;
+                }).filter(Boolean);
+    
+                if (toolResponses.length > 0) {
+                    const finalStream = await chatSession.sendMessageStream({
+                        toolResponses
+                    });
+                    for await (const chunk of finalStream) {
+                        yield { text: chunk.text, groundingChunks: chunk.candidates?.[0]?.groundingMetadata?.groundingChunks };
+                    }
+                }
+            } else if (!textStreamStarted) {
+                // This is an edge case for an empty or non-text initial response without function calls.
+                yield { text: "I'm not sure how to answer that. Could you please rephrase your question?" };
+            }
+        } catch (error) {
+            console.error("Error calling Gemini API:", error);
+            chat = null; // Reset chat on error
+            if (error instanceof Error) {
+                yield { text: `Sorry, I encountered an error while trying to answer your question: ${error.message}` };
+            } else {
+                yield { text: "Sorry, I encountered an unknown error. Please try again later." };
             }
         }
-        
-        const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-        return { text: response.text, groundingChunks };
-      } catch (error) {
-        console.error("Error calling Gemini API:", error);
-        chat = null; // Reset chat on error
-        if (error instanceof Error) {
-          return { text: `Sorry, I encountered an error while trying to answer your question: ${error.message}` };
-        }
-        return { text: "Sorry, I encountered an unknown error. Please try again later." };
-      }
     };
 
     export const generateItinerary = async (duration: string, interests: string[], budget: string): Promise<Itinerary> => {

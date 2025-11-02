@@ -1,7 +1,7 @@
-
 declare const firebase: any; // Declare firebase as a global variable from the script tag in index.html
 
-// IMPORTANT: Replace these with your actual Firebase project configuration.
+// NOTE: In this demo, placeholders are used. 
+// For a production build, replace these with your actual Firebase config.
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
   authDomain: "YOUR_AUTH_DOMAIN",
@@ -20,9 +20,13 @@ let messaging: any;
 export const initializeFirebase = () => {
     // Check if Firebase is available on the window and has not been initialized yet.
     if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-        messaging = firebase.messaging();
-        console.log("Firebase initialized for notifications.");
+        try {
+            firebase.initializeApp(firebaseConfig);
+            messaging = firebase.messaging();
+            console.log("Firebase initialized for notifications.");
+        } catch (e) {
+            console.error("Firebase initialization error. Make sure your firebaseConfig placeholders are replaced with actual values for a real deployment.", e);
+        }
     }
 }
 
@@ -44,8 +48,7 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
       
       // Get the token.
       const token = await messaging.getToken({
-        // IMPORTANT: Replace this with your VAPID key from the Firebase console.
-        vapidKey: 'YOUR_VAPID_KEY_FROM_FIREBASE_CONSOLE',
+        vapidKey: "YOUR_VAPID_KEY", // Replace with your VAPID key
       });
 
       if (token) {

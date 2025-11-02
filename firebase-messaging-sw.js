@@ -1,10 +1,9 @@
-
 // Scripts for firebase and messaging
 importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js');
 
-// Your web app's Firebase configuration
-// This would be replaced with your actual config from the Firebase console
+// NOTE: In this demo, placeholders are used. 
+// For a production build, replace these with your actual Firebase config.
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
   authDomain: "YOUR_AUTH_DOMAIN",

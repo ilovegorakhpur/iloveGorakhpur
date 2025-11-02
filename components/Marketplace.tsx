@@ -166,7 +166,7 @@ const Marketplace: React.FC = () => {
     const handleEditEvent = (event: LocalEvent) => {
         setEditingEvent(event);
         // Format date for datetime-local input
-        const localDate = new Date(event.date).toISOString().slice(0, 16);
+        const localDate = new Date(new Date(event.date).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
         setEventForm({
             title: event.title,
             date: localDate,
@@ -208,9 +208,6 @@ const Marketplace: React.FC = () => {
         }
         
         console.log('// SIMULATING PUSH NOTIFICATION: A new event was created. A notification would be sent to subscribed users.');
-        // In a real app, this would trigger a backend call.
-        // The backend would then use FCM to send notifications to users
-        // who have opted-in for 'newEvents' notifications.
         
         setShowEventForm(false);
     };
@@ -506,38 +503,127 @@ const Marketplace: React.FC = () => {
                 </div>
                 
                 {/* Modals and Status Popups */}
-                {showEventForm && (
+                 {showEventForm && (
                      <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowEventForm(false)}>
-                        <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
-                            <button onClick={() => setShowEventForm(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><XIcon /></button>
-                            <div className="p-8">
-                                <h2 className="text-2xl font-bold text-gray-900 mb-6">{editingEvent ? 'Edit Event' : 'Create a New Event'}</h2>
-                                <form onSubmit={handleEventSubmit} className="space-y-4">
-                                     <input name="title" value={eventForm.title} onChange={handleEventFormChange} placeholder="Event Title" className="w-full p-2 border rounded" required />
-                                     <input name="date" type="datetime-local" value={eventForm.date} onChange={handleEventFormChange} className="w-full p-2 border rounded" required />
-                                     <input name="location" value={eventForm.location} onChange={handleEventFormChange} placeholder="Location" className="w-full p-2 border rounded" required />
-                                     <input name="price" type="number" value={eventForm.price} onChange={handleEventFormChange} placeholder="Price (0 for free)" className="w-full p-2 border rounded" required />
-                                     <input name="category" value={eventForm.category} onChange={handleEventFormChange} placeholder="Category (e.g., Music, Workshop)" className="w-full p-2 border rounded" required />
-                                     <button type="submit" className="w-full py-2 bg-orange-500 text-white rounded hover:bg-orange-600">{editingEvent ? 'Update Event' : 'Create Event'}</button>
-                                </form>
+                        <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                                <h2 className="text-2xl font-bold text-gray-900">{editingEvent ? 'Edit Event' : 'Create a New Event'}</h2>
+                                <button onClick={() => setShowEventForm(false)} className="text-gray-400 hover:text-gray-600"><XIcon /></button>
                             </div>
+                            <form onSubmit={handleEventSubmit} className="p-6 space-y-6 overflow-y-auto">
+                                <div>
+                                    <label htmlFor="event-image-upload" className="block text-sm font-medium leading-6 text-gray-900">Event Image</label>
+                                    <div className="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
+                                        {eventImagePreview ? (
+                                             <div className="text-center">
+                                                <img src={eventImagePreview} alt="Event preview" className="mx-auto h-32 w-auto object-cover rounded-md" />
+                                                <label htmlFor="event-image-upload" className="relative cursor-pointer mt-4 rounded-md bg-white font-semibold text-orange-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-600 focus-within:ring-offset-2 hover:text-orange-500">
+                                                    <span>Change image</span>
+                                                    <input id="event-image-upload" name="event-image" type="file" className="sr-only" accept="image/*" onChange={handleEventImageChange} />
+                                                </label>
+                                            </div>
+                                        ) : (
+                                            <div className="text-center">
+                                                <svg className="mx-auto h-12 w-12 text-gray-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clipRule="evenodd" /></svg>
+                                                <div className="mt-4 flex text-sm leading-6 text-gray-600">
+                                                    <label htmlFor="event-image-upload" className="relative cursor-pointer rounded-md bg-white font-semibold text-orange-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-600 focus-within:ring-offset-2 hover:text-orange-500">
+                                                        <span>Upload a file</span>
+                                                        <input id="event-image-upload" name="event-image" type="file" className="sr-only" accept="image/*" onChange={handleEventImageChange} />
+                                                    </label>
+                                                    <p className="pl-1">or drag and drop</p>
+                                                </div>
+                                                <p className="text-xs leading-5 text-gray-600">PNG, JPG, GIF up to 10MB</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                 <div>
+                                    <label htmlFor="title" className="block text-sm font-medium text-gray-900">Event Title</label>
+                                    <input id="title" name="title" value={eventForm.title} onChange={handleEventFormChange} placeholder="e.g., Live Music Night" className="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-orange-600" required />
+                                 </div>
+                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div>
+                                        <label htmlFor="date" className="block text-sm font-medium text-gray-900">Date & Time</label>
+                                        <input id="date" name="date" type="datetime-local" value={eventForm.date} onChange={handleEventFormChange} className="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-orange-600" required />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="price" className="block text-sm font-medium text-gray-900">Price (₹)</label>
+                                        <input id="price" name="price" type="number" value={eventForm.price} onChange={handleEventFormChange} placeholder="0 for free" className="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-orange-600" required />
+                                    </div>
+                                 </div>
+                                 <div>
+                                    <label htmlFor="location" className="block text-sm font-medium text-gray-900">Location</label>
+                                    <input id="location" name="location" value={eventForm.location} onChange={handleEventFormChange} placeholder="e.g., Central Park" className="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-orange-600" required />
+                                 </div>
+                                 <div>
+                                    <label htmlFor="category" className="block text-sm font-medium text-gray-900">Category</label>
+                                    <input id="category" name="category" value={eventForm.category} onChange={handleEventFormChange} placeholder="e.g., Music, Workshop, Comedy" className="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-orange-600" required />
+                                 </div>
+                                 <div className="pt-4 flex justify-end gap-4">
+                                    <button type="button" onClick={() => setShowEventForm(false)} className="px-6 py-2 text-sm font-semibold text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
+                                    <button type="submit" className="px-6 py-2 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-lg shadow-sm">{editingEvent ? 'Update Event' : 'Create Event'}</button>
+                                 </div>
+                            </form>
                         </div>
                     </div>
                 )}
                 {showProductForm && (
                      <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowProductForm(false)}>
-                        <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
-                           <button onClick={() => setShowProductForm(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><XIcon /></button>
-                             <div className="p-8">
-                                <h2 className="text-2xl font-bold text-gray-900 mb-6">{editingProduct ? 'Edit Product' : 'Add a New Product'}</h2>
-                                <form onSubmit={handleProductSubmit} className="space-y-4">
-                                    <input name="name" value={productForm.name} onChange={handleProductFormChange} placeholder="Product Name" className="w-full p-2 border rounded" required />
-                                    <input name="price" type="number" value={productForm.price} onChange={handleProductFormChange} placeholder="Price" className="w-full p-2 border rounded" required />
-                                    <input name="category" value={productForm.category} onChange={handleProductFormChange} placeholder="Category (e.g., Handicrafts, Food)" className="w-full p-2 border rounded" required />
-                                    <textarea name="description" value={productForm.description} onChange={handleProductFormChange} placeholder="Product Description" className="w-full p-2 border rounded" rows={3}></textarea>
-                                     <button type="submit" className="w-full py-2 bg-orange-500 text-white rounded hover:bg-orange-600">{editingProduct ? 'Update Product' : 'Add Product'}</button>
-                                </form>
-                            </div>
+                        <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                           <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                                <h2 className="text-2xl font-bold text-gray-900">{editingProduct ? 'Edit Product' : 'Add a New Product'}</h2>
+                                <button onClick={() => setShowProductForm(false)} className="text-gray-400 hover:text-gray-600"><XIcon /></button>
+                           </div>
+                            <form onSubmit={handleProductSubmit} className="p-6 space-y-6 overflow-y-auto">
+                                <div>
+                                    <label htmlFor="product-image-upload" className="block text-sm font-medium leading-6 text-gray-900">Product Image</label>
+                                    <div className="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
+                                        {productImagePreview ? (
+                                             <div className="text-center">
+                                                <img src={productImagePreview} alt="Product preview" className="mx-auto h-32 w-auto object-cover rounded-md" />
+                                                <label htmlFor="product-image-upload" className="relative cursor-pointer mt-4 rounded-md bg-white font-semibold text-orange-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-600 focus-within:ring-offset-2 hover:text-orange-500">
+                                                    <span>Change image</span>
+                                                    <input id="product-image-upload" name="product-image" type="file" className="sr-only" accept="image/*" onChange={handleProductImageChange} />
+                                                </label>
+                                            </div>
+                                        ) : (
+                                            <div className="text-center">
+                                                <svg className="mx-auto h-12 w-12 text-gray-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clipRule="evenodd" /></svg>
+                                                <div className="mt-4 flex text-sm leading-6 text-gray-600">
+                                                    <label htmlFor="product-image-upload" className="relative cursor-pointer rounded-md bg-white font-semibold text-orange-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-600 focus-within:ring-offset-2 hover:text-orange-500">
+                                                        <span>Upload a file</span>
+                                                        <input id="product-image-upload" name="product-image" type="file" className="sr-only" accept="image/*" onChange={handleProductImageChange} />
+                                                    </label>
+                                                    <p className="pl-1">or drag and drop</p>
+                                                </div>
+                                                <p className="text-xs leading-5 text-gray-600">PNG, JPG, GIF up to 10MB</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label htmlFor="name" className="block text-sm font-medium text-gray-900">Product Name</label>
+                                    <input id="name" name="name" value={productForm.name} onChange={handleProductFormChange} placeholder="e.g., Handcrafted Terracotta Vase" className="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-orange-600" required />
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div>
+                                        <label htmlFor="price" className="block text-sm font-medium text-gray-900">Price (₹)</label>
+                                        <input id="price" name="price" type="number" value={productForm.price} onChange={handleProductFormChange} placeholder="e.g., 500" className="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-orange-600" required />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="category" className="block text-sm font-medium text-gray-900">Category</label>
+                                        <input id="category" name="category" value={productForm.category} onChange={handleProductFormChange} placeholder="e.g., Handicrafts, Food" className="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-orange-600" required />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label htmlFor="description" className="block text-sm font-medium text-gray-900">Description</label>
+                                    <textarea id="description" name="description" value={productForm.description} onChange={handleProductFormChange} placeholder="Describe your product..." className="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-orange-600" rows={4}></textarea>
+                                </div>
+                                <div className="pt-4 flex justify-end gap-4">
+                                    <button type="button" onClick={() => setShowProductForm(false)} className="px-6 py-2 text-sm font-semibold text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
+                                    <button type="submit" className="px-6 py-2 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-lg shadow-sm">{editingProduct ? 'Update Product' : 'Add Product'}</button>
+                                 </div>
+                            </form>
                         </div>
                     </div>
                 )}
