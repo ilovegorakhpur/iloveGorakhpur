@@ -72,7 +72,7 @@ const Header: React.FC<HeaderProps> = ({ onShowLegal }) => {
   };
 
   return (
-    <header className="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-40">
+    <header className="bg-gradient-to-b from-white/80 to-white/0 backdrop-blur-md shadow-sm sticky top-0 z-40">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center py-4">
           <div className="text-2xl font-bold text-orange-600">
