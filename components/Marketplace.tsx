@@ -26,6 +26,19 @@ const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-US', options);
 }
 
+const FormLabel: React.FC<{htmlFor: string, children: React.ReactNode}> = ({htmlFor, children}) => (
+    <label htmlFor={htmlFor} className="block text-sm font-medium text-gray-700 mb-1">{children}</label>
+);
+
+const FormInput: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = (props) => (
+    <input {...props} className="w-full px-4 py-2 text-gray-700 bg-gray-100 rounded-md border border-gray-200 focus:border-orange-500 focus:ring-orange-500 focus:outline-none transition-colors" />
+);
+
+const FormSelect: React.FC<React.SelectHTMLAttributes<HTMLSelectElement>> = (props) => (
+    <select {...props} className="w-full px-4 py-2 text-gray-700 bg-gray-100 rounded-md border border-gray-200 focus:border-orange-500 focus:ring-orange-500 focus:outline-none transition-colors" />
+);
+
+
 const Marketplace: React.FC = () => {
     const { user, openAuthModal } = useAuth();
     const { addToCart } = useCart();
@@ -323,357 +336,285 @@ const Marketplace: React.FC = () => {
         };
         setProducts(products.map(p => p.id === selectedProduct.id ? updatedProduct : p));
         setSelectedProduct(updatedProduct);
-        setNewReviewRating(0);
         setNewReviewComment('');
+        setNewReviewRating(0);
     };
     
-    const renderStars = (rating: number, setRating?: (r: number) => void) => {
-        return (
-            <div className="flex items-center">
-                {[1, 2, 3, 4, 5].map((star) => (
-                    <button key={star} type={setRating ? 'button' : undefined} onClick={setRating ? () => setRating(star) : undefined} className={`${setRating ? 'cursor-pointer' : ''}`}>
-                         <StarIcon className={`h-5 w-5 ${star <= rating ? 'text-yellow-400' : 'text-gray-300'}`} />
-                    </button>
-                ))}
-            </div>
-        );
-    };
-
-    const averageRating = (reviews: Review[] = []) => {
-        if (!reviews || reviews.length === 0) return 0;
-        const total = reviews.reduce((acc, review) => acc + review.rating, 0);
-        return parseFloat((total / reviews.length).toFixed(1));
-    };
-
     return (
-        <section id="marketplace" className="py-16 sm:py-24 bg-gray-50">
+        <section id="marketplace" className="py-16 sm:py-24 bg-white">
             <div className="container mx-auto px-4">
                 <div className="text-center mb-12">
                     <h2 className="text-3xl md:text-4xl font-bold text-gray-900 flex items-center justify-center">
-                        <ShoppingCartIcon className="h-8 w-8 text-orange-500" />
+                        <ShoppingCartIcon />
                         <span className="ml-3">Gorakhpur Marketplace</span>
                     </h2>
                     <p className="mt-4 text-lg text-gray-600">Discover local events and unique products from our city's creators.</p>
                 </div>
-
-                <div className="max-w-7xl mx-auto">
+                
+                <div className="max-w-6xl mx-auto">
                     {/* Tabs */}
-                    <div className="mb-8 border-b border-gray-200">
-                        <nav className="-mb-px flex space-x-8 justify-center" aria-label="Tabs">
-                            <button onClick={() => handleTabChange('events')} className={`${activeTab === 'events' ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} flex items-center whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg`}>
-                                <TicketIcon /> <span className="ml-2">Local Events</span>
-                            </button>
-                            <button onClick={() => handleTabChange('products')} className={`${activeTab === 'products' ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} flex items-center whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg`}>
-                                <ShoppingCartIcon className="h-5 w-5" /> <span className="ml-2">Local Products</span>
-                            </button>
-                        </nav>
+                    <div className="flex justify-center border-b border-gray-200 mb-8">
+                        <button onClick={() => handleTabChange('events')} className={`px-6 py-3 font-semibold text-sm transition-colors ${activeTab === 'events' ? 'border-b-2 border-orange-500 text-orange-600' : 'text-gray-500 hover:text-gray-700'}`}>
+                            Local Events
+                        </button>
+                        <button onClick={() => handleTabChange('products')} className={`px-6 py-3 font-semibold text-sm transition-colors ${activeTab === 'products' ? 'border-b-2 border-orange-500 text-orange-600' : 'text-gray-500 hover:text-gray-700'}`}>
+                            Local Products
+                        </button>
                     </div>
 
-                    {/* Filters and Actions */}
+                    {/* Filters & Actions */}
                     <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                         <div className="relative md:col-span-2">
-                             <input type="text" placeholder={`Search for ${activeTab}...`} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-3 text-gray-700 bg-white rounded-lg border-2 border-gray-200 focus:border-orange-500 focus:ring-orange-500 focus:outline-none transition-colors" />
-                             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                             <input
+                                type="text"
+                                placeholder={`Search ${activeTab === 'events' ? 'events' : 'products'}...`}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 text-gray-700 bg-gray-100 rounded-lg border-2 border-transparent focus:border-orange-500 focus:ring-orange-500 focus:outline-none transition-colors"
+                            />
+                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                             </div>
                         </div>
-                        <div className="text-right">
-                           {user ? (
-                                <button onClick={activeTab === 'events' ? handleShowEventForm : handleShowProductForm} className="w-full md:w-auto flex items-center justify-center px-5 py-3 bg-orange-500 text-white font-semibold rounded-lg shadow-sm hover:bg-orange-600 transition-colors">
-                                    <PlusIcon /> <span className="ml-2">Add New {activeTab === 'events' ? 'Event' : 'Product'}</span>
-                                </button>
-                           ) : (
-                                <button onClick={() => openAuthModal('login')} className="w-full md:w-auto px-5 py-3 bg-orange-500 text-white font-semibold rounded-lg shadow-sm hover:bg-orange-600 transition-colors">
-                                    Login to Add Your Listing
-                                </button>
-                           )}
-                        </div>
+                        {user ? (
+                            <button onClick={activeTab === 'events' ? handleShowEventForm : handleShowProductForm} className="w-full md:w-auto justify-self-end flex items-center justify-center px-4 py-3 bg-orange-500 text-white font-semibold rounded-lg shadow-sm hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all">
+                                <PlusIcon />
+                                <span className="ml-2">{`Add New ${activeTab === 'events' ? 'Event' : 'Product'}`}</span>
+                            </button>
+                        ) : (
+                            <div className="text-center md:text-right">
+                                <p className="text-sm text-gray-600">Want to list your own? <button onClick={() => openAuthModal('login')} className="font-semibold text-orange-600 hover:underline">Log in to create.</button></p>
+                            </div>
+                        )}
                     </div>
-                    <div className="mb-8 flex flex-wrap gap-2">
-                        {activeTab === 'events' && dateFilters.map(filter => (
-                            <button key={filter} onClick={() => setDateFilter(filter)} className={`px-4 py-2 text-sm font-medium rounded-full ${dateFilter === filter ? 'bg-orange-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`}>{filter}</button>
-                        ))}
-                    </div>
-
-                    {/* Content Grid */}
-                    {activeTab === 'events' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {filteredEvents.map(event => (
-                                <div key={event.id} className="bg-white rounded-xl shadow-md overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col">
-                                    <img className="h-48 w-full object-cover" src={event.imageUrl} alt={event.title} />
-                                    <div className="p-4 flex flex-col flex-grow">
-                                        <p className="text-sm font-semibold text-orange-600">{event.category}</p>
-                                        <h3 className="text-lg font-bold text-gray-900 mt-1 mb-2 flex-grow">{event.title}</h3>
-                                        <p className="text-sm text-gray-500 mb-2">{formatDate(event.date)}</p>
-                                        <p className="text-sm text-gray-700 mb-4">{event.location}</p>
-                                        <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
-                                            <p className="text-lg font-bold text-gray-800">{event.price > 0 ? `₹${event.price}` : 'Free'}</p>
-                                            <div className="flex items-center gap-1">
-                                                {user?.id === event.creatorId && (
-                                                    <>
-                                                        <button onClick={() => handleEditEvent(event)} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full" title="Edit Event"><PencilIcon /></button>
-                                                        <button onClick={() => handleDeleteEvent(event.id)} className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full" title="Delete Event"><TrashIcon /></button>
-                                                    </>
-                                                )}
-                                                <button onClick={() => handleShare(event)} className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-full" title="Share Event"><ShareIcon className="h-4 w-4" /></button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
                     
-                     {activeTab === 'products' && (
-                        <>
-                         {recentlyViewed.length > 0 && (
-                                <div className="mb-12">
-                                    <h3 className="text-xl font-bold text-gray-800 mb-4">Recently Viewed</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                        {recentlyViewed.map(product => (
-                                             <div key={`recent-${product.id}`} className="bg-white rounded-xl shadow-md overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col group">
-                                                <div className="relative">
-                                                    <img className="h-56 w-full object-cover" src={product.imageUrl} alt={product.name} />
-                                                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                        <button onClick={() => handleProductView(product)} className="px-4 py-2 bg-white/80 text-black font-semibold rounded-full backdrop-blur-sm">Quick View</button>
-                                                    </div>
-                                                </div>
-                                                <div className="p-4 flex flex-col flex-grow">
-                                                    <h3 className="text-base font-bold text-gray-800 mt-1 flex-grow truncate">{product.name}</h3>
-                                                    <div className="mt-4 flex items-center justify-between">
-                                                        <p className="text-lg font-bold text-gray-900">₹{product.price}</p>
-                                                         <button onClick={() => handleAddToCart(product)} className="p-2 bg-orange-100 text-orange-600 rounded-full hover:bg-orange-500 hover:text-white transition-colors">
-                                                            <PlusIcon />
-                                                        </button>
-                                                    </div>
+                    {/* Content */}
+                    <div>
+                        {activeTab === 'events' && (
+                            <div>
+                                <div className="mb-6 flex flex-wrap gap-2">
+                                    <span className="text-sm font-semibold text-gray-700 self-center mr-2">Filter by Date:</span>
+                                    {dateFilters.map(filter => (
+                                        <button key={filter} onClick={() => setDateFilter(filter)} className={`px-4 py-2 text-xs font-medium rounded-full transition-colors ${dateFilter === filter ? 'bg-orange-500 text-white shadow-sm' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100'}`}>{filter}</button>
+                                    ))}
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {filteredEvents.map(event => (
+                                        <div key={event.id} className="bg-white rounded-xl shadow-md overflow-hidden transition-shadow duration-300 hover:shadow-xl group">
+                                            <div className="relative">
+                                                <img className="h-48 w-full object-cover" src={event.imageUrl} alt={event.title} />
+                                                <div className="absolute top-2 right-2 flex items-center gap-2">
+                                                    {user?.id === event.creatorId && (
+                                                        <>
+                                                            <button onClick={() => handleEditEvent(event)} className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-700 hover:bg-white hover:text-blue-600"><PencilIcon/></button>
+                                                            <button onClick={() => handleDeleteEvent(event.id)} className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-700 hover:bg-white hover:text-red-600"><TrashIcon/></button>
+                                                        </>
+                                                    )}
+                                                    <button onClick={() => handleShare(event)} className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-700 hover:bg-white hover:text-orange-600"><ShareIcon className="h-4 w-4"/></button>
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {filteredProducts.map(product => (
-                                <div key={product.id} className="bg-white rounded-xl shadow-md overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col group">
-                                    <div className="relative">
-                                        <img className="h-56 w-full object-cover" src={product.imageUrl} alt={product.name} />
-                                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            <button onClick={() => handleProductView(product)} className="px-4 py-2 bg-white/80 text-black font-semibold rounded-full backdrop-blur-sm">Quick View</button>
-                                        </div>
-                                    </div>
-                                    <div className="p-4 flex flex-col flex-grow">
-                                        <p className="text-xs font-semibold text-gray-500 uppercase">{product.category}</p>
-                                        <h3 className="text-base font-bold text-gray-800 mt-1 flex-grow">{product.name}</h3>
-                                        <p className="text-sm text-gray-500">by {product.seller}</p>
-                                        <div className="flex items-center mt-2">
-                                            {renderStars(averageRating(product.reviews))}
-                                            <span className="text-xs text-gray-500 ml-2">({product.reviews?.length || 0})</span>
-                                        </div>
-                                        <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
-                                            <p className="text-lg font-bold text-gray-900">₹{product.price}</p>
-                                            <button onClick={() => handleAddToCart(product)} className="p-2 bg-orange-100 text-orange-600 rounded-full hover:bg-orange-500 hover:text-white transition-colors">
-                                                <PlusIcon />
-                                            </button>
-                                        </div>
-                                         {user?.id === product.creatorId && (
-                                            <div className="mt-2 flex items-center justify-end gap-1">
-                                                <button onClick={() => handleEditProduct(product)} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full" title="Edit Product"><PencilIcon className="h-3 w-3"/></button>
-                                                <button onClick={() => handleDeleteProduct(product.id)} className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full" title="Delete Product"><TrashIcon className="h-3 w-3"/></button>
+                                            <div className="p-4">
+                                                <p className="text-xs font-semibold text-orange-600 uppercase">{event.category}</p>
+                                                <h3 className="text-lg font-bold text-gray-800 mt-1 truncate">{event.title}</h3>
+                                                <p className="text-sm text-gray-600 mt-1">{formatDate(event.date)}</p>
+                                                <p className="text-sm text-gray-600">{event.location}</p>
+                                                <div className="mt-4 flex justify-between items-center">
+                                                    <p className="text-lg font-bold text-gray-900">₹{event.price}</p>
+                                                    <button onClick={() => alert('Ticket booking functionality coming soon!')} className="flex items-center px-4 py-2 bg-orange-500 text-white font-semibold rounded-md text-sm hover:bg-orange-600 transition-colors">
+                                                        <TicketIcon /> <span className="ml-1">Get Ticket</span>
+                                                    </button>
+                                                </div>
                                             </div>
-                                        )}
-                                    </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-                        </>
-                    )}
+                            </div>
+                        )}
 
-                    {(activeTab === 'events' && filteredEvents.length === 0) && (
-                         <div className="text-center py-16 bg-white rounded-lg shadow-sm">
-                            <h3 className="text-xl font-semibold text-gray-800">No Events Found</h3>
-                            <p className="text-gray-600 mt-2">Try a different search or filter, or be the first to add one!</p>
-                        </div>
-                    )}
-                     {(activeTab === 'products' && filteredProducts.length === 0) && (
-                         <div className="text-center py-16 bg-white rounded-lg shadow-sm">
-                            <h3 className="text-xl font-semibold text-gray-800">No Products Found</h3>
-                            <p className="text-gray-600 mt-2">Try a different search or filter, or be the first to add one!</p>
-                        </div>
-                    )}
+                        {activeTab === 'products' && (
+                           <div>
+                                <div className="mb-6 flex flex-wrap gap-2">
+                                    <span className="text-sm font-semibold text-gray-700 self-center mr-2">Filter by Category:</span>
+                                    {productCategories.map(category => (
+                                        <button key={category} onClick={() => setProductCategory(category)} className={`px-4 py-2 text-xs font-medium rounded-full transition-colors ${productCategory === category ? 'bg-orange-500 text-white shadow-sm' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100'}`}>{category}</button>
+                                    ))}
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                    {filteredProducts.map(product => (
+                                        <div key={product.id} className="bg-white rounded-xl shadow-md overflow-hidden transition-shadow duration-300 hover:shadow-xl group flex flex-col">
+                                            <div className="relative">
+                                                <img className="h-56 w-full object-cover" src={product.imageUrl} alt={product.name} />
+                                                <div className="absolute top-2 right-2 flex flex-col items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    {user?.id === product.creatorId && (
+                                                        <>
+                                                            <button onClick={() => handleEditProduct(product)} className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-700 hover:bg-white hover:text-blue-600"><PencilIcon/></button>
+                                                            <button onClick={() => handleDeleteProduct(product.id)} className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-700 hover:bg-white hover:text-red-600"><TrashIcon/></button>
+                                                        </>
+                                                    )}
+                                                    <button onClick={() => handleProductView(product)} className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-700 hover:bg-white hover:text-orange-600"><ShareIcon className="h-4 w-4"/></button>
+                                                </div>
+                                                <button onClick={() => handleProductView(product)} className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-3/4 py-2 bg-white text-sm font-semibold text-gray-800 rounded-lg shadow-md opacity-0 group-hover:opacity-100 group-hover:-translate-y-2 transition-all">Quick View</button>
+                                            </div>
+                                            <div className="p-4 flex flex-col flex-grow">
+                                                <p className="text-xs text-gray-500">{product.category}</p>
+                                                <h3 className="text-base font-bold text-gray-800 mt-1 flex-grow">{product.name}</h3>
+                                                <div className="mt-4 flex justify-between items-center">
+                                                    <p className="text-lg font-bold text-gray-900">₹{product.price}</p>
+                                                    <button onClick={() => handleAddToCart(product)} className="p-2 bg-orange-100 text-orange-600 rounded-full hover:bg-orange-200 transition-colors">
+                                                        <PlusIcon />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                {recentlyViewed.length > 0 && (
+                                    <div className="mt-16">
+                                        <h3 className="text-2xl font-bold text-gray-800 mb-6">Recently Viewed</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                            {recentlyViewed.map(product => (
+                                                 <div key={product.id} className="bg-white rounded-xl shadow-md overflow-hidden transition-shadow duration-300 hover:shadow-xl group flex flex-col">
+                                                    <img className="h-40 w-full object-cover" src={product.imageUrl} alt={product.name} />
+                                                    <div className="p-4 flex flex-col flex-grow">
+                                                        <h3 className="text-sm font-bold text-gray-800 mt-1 flex-grow">{product.name}</h3>
+                                                        <div className="mt-4 flex justify-between items-center">
+                                                            <p className="text-base font-bold text-gray-900">₹{product.price}</p>
+                                                            <button onClick={() => handleProductView(product)} className="text-xs font-semibold text-orange-600 hover:underline">View</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                           </div>
+                        )}
+                    </div>
                 </div>
                 
-                {/* Modals and Status Popups */}
-                 {showEventForm && (
-                     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowEventForm(false)}>
-                        <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                                <h2 className="text-2xl font-bold text-gray-900">{editingEvent ? 'Edit Event' : 'Create a New Event'}</h2>
-                                <button onClick={() => setShowEventForm(false)} className="text-gray-400 hover:text-gray-600"><XIcon /></button>
+                {/* Modals for Forms */}
+                {(showEventForm || showProductForm) && (
+                    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => { setShowEventForm(false); setShowProductForm(false); }}>
+                        <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-start justify-between p-6 border-b">
+                                <h2 className="text-2xl font-bold text-gray-900">{showEventForm ? (editingEvent ? 'Edit Event' : 'Add New Event') : (editingProduct ? 'Edit Product' : 'Add New Product')}</h2>
+                                <button onClick={() => { setShowEventForm(false); setShowProductForm(false); }} className="text-gray-400 hover:text-gray-600 transition-colors"><XIcon /></button>
                             </div>
-                            <form onSubmit={handleEventSubmit} className="p-6 space-y-6 overflow-y-auto">
-                                <div>
-                                    <label htmlFor="event-image-upload" className="block text-sm font-medium leading-6 text-gray-900">Event Image</label>
-                                    <div className="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
-                                        {eventImagePreview ? (
-                                             <div className="text-center">
-                                                <img src={eventImagePreview} alt="Event preview" className="mx-auto h-32 w-auto object-cover rounded-md" />
-                                                <label htmlFor="event-image-upload" className="relative cursor-pointer mt-4 rounded-md bg-white font-semibold text-orange-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-600 focus-within:ring-offset-2 hover:text-orange-500">
-                                                    <span>Change image</span>
-                                                    <input id="event-image-upload" name="event-image" type="file" className="sr-only" accept="image/*" onChange={handleEventImageChange} />
-                                                </label>
+                            {showEventForm && (
+                                <form onSubmit={handleEventSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div><FormLabel htmlFor="title">Event Title</FormLabel><FormInput type="text" name="title" id="title" value={eventForm.title} onChange={handleEventFormChange} required /></div>
+                                        <div><FormLabel htmlFor="category">Category</FormLabel><FormInput type="text" name="category" id="category" value={eventForm.category} onChange={handleEventFormChange} placeholder="e.g., Music, Workshop" required /></div>
+                                    </div>
+                                    <div><FormLabel htmlFor="location">Location</FormLabel><FormInput type="text" name="location" id="location" value={eventForm.location} onChange={handleEventFormChange} required /></div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div><FormLabel htmlFor="date">Date & Time</FormLabel><FormInput type="datetime-local" name="date" id="date" value={eventForm.date} onChange={handleEventFormChange} required /></div>
+                                        <div><FormLabel htmlFor="price">Price (₹)</FormLabel><FormInput type="number" name="price" id="price" value={eventForm.price} onChange={handleEventFormChange} placeholder="Enter 0 for free event" required /></div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div><FormLabel htmlFor="duration">Duration</FormLabel><FormInput type="text" name="duration" id="duration" value={eventForm.duration} onChange={handleEventFormChange} placeholder="e.g., 3 hours" /></div>
+                                        <div><FormLabel htmlFor="recurring">Recurring</FormLabel><FormSelect name="recurring" id="recurring" value={eventForm.recurring} onChange={handleEventFormChange}><option>None</option><option>Daily</option><option>Weekly</option><option>Monthly</option></FormSelect></div>
+                                    </div>
+                                     <div>
+                                        <FormLabel htmlFor="event-image-upload">Event Image</FormLabel>
+                                        <div className="mt-1 flex items-center space-x-4 p-4 border-2 border-dashed border-gray-300 rounded-lg">
+                                            {eventImagePreview ? (<img src={eventImagePreview} alt="Event preview" className="h-24 w-24 object-cover rounded-md"/>) : (<div className="h-24 w-24 bg-gray-100 rounded-md flex items-center justify-center text-gray-400"><TicketIcon /></div>)}
+                                            <div>
+                                                <input type="file" id="event-image-upload" className="hidden" onChange={handleEventImageChange} accept="image/*" />
+                                                <label htmlFor="event-image-upload" className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50">Change</label>
+                                                <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 10MB</p>
                                             </div>
-                                        ) : (
-                                            <div className="text-center">
-                                                <svg className="mx-auto h-12 w-12 text-gray-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clipRule="evenodd" /></svg>
-                                                <div className="mt-4 flex text-sm leading-6 text-gray-600">
-                                                    <label htmlFor="event-image-upload" className="relative cursor-pointer rounded-md bg-white font-semibold text-orange-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-600 focus-within:ring-offset-2 hover:text-orange-500">
-                                                        <span>Upload a file</span>
-                                                        <input id="event-image-upload" name="event-image" type="file" className="sr-only" accept="image/*" onChange={handleEventImageChange} />
-                                                    </label>
-                                                    <p className="pl-1">or drag and drop</p>
-                                                </div>
-                                                <p className="text-xs leading-5 text-gray-600">PNG, JPG, GIF up to 10MB</p>
+                                        </div>
+                                    </div>
+                                    <div className="pt-4 flex justify-end"><button type="submit" className="px-6 py-2 bg-orange-500 text-white font-semibold rounded-md hover:bg-orange-600">Save Event</button></div>
+                                </form>
+                            )}
+                            {showProductForm && (
+                                <form onSubmit={handleProductSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div><FormLabel htmlFor="name">Product Name</FormLabel><FormInput type="text" name="name" id="name" value={productForm.name} onChange={handleProductFormChange} required /></div>
+                                        <div><FormLabel htmlFor="category">Category</FormLabel><FormInput type="text" name="category" id="category" value={productForm.category} onChange={handleProductFormChange} placeholder="e.g., Handicrafts, Food" required /></div>
+                                    </div>
+                                    <div><FormLabel htmlFor="price">Price (₹)</FormLabel><FormInput type="number" name="price" id="price" value={productForm.price} onChange={handleProductFormChange} required /></div>
+                                    <div><FormLabel htmlFor="description">Description</FormLabel><textarea name="description" id="description" value={productForm.description} onChange={handleProductFormChange} rows={4} className="w-full px-4 py-2 text-gray-700 bg-gray-100 rounded-md border border-gray-200 focus:border-orange-500 focus:ring-orange-500 focus:outline-none transition-colors" /></div>
+                                    <div>
+                                        <FormLabel htmlFor="product-image-upload">Product Image</FormLabel>
+                                        <div className="mt-1 flex items-center space-x-4 p-4 border-2 border-dashed border-gray-300 rounded-lg">
+                                            {productImagePreview ? (<img src={productImagePreview} alt="Product preview" className="h-24 w-24 object-cover rounded-md"/>) : (<div className="h-24 w-24 bg-gray-100 rounded-md flex items-center justify-center text-gray-400"><ShoppingCartIcon /></div>)}
+                                            <div>
+                                                <input type="file" id="product-image-upload" className="hidden" onChange={handleProductImageChange} accept="image/*" />
+                                                <label htmlFor="product-image-upload" className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50">Change</label>
+                                                <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 10MB</p>
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
-                                </div>
-                                 <div>
-                                    <label htmlFor="title" className="block text-sm font-medium text-gray-900">Event Title</label>
-                                    <input id="title" name="title" value={eventForm.title} onChange={handleEventFormChange} placeholder="e.g., Live Music Night" className="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-orange-600" required />
-                                 </div>
-                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    <div>
-                                        <label htmlFor="date" className="block text-sm font-medium text-gray-900">Date & Time</label>
-                                        <input id="date" name="date" type="datetime-local" value={eventForm.date} onChange={handleEventFormChange} className="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-orange-600" required />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="price" className="block text-sm font-medium text-gray-900">Price (₹)</label>
-                                        <input id="price" name="price" type="number" value={eventForm.price} onChange={handleEventFormChange} placeholder="0 for free" className="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-orange-600" required />
-                                    </div>
-                                 </div>
-                                 <div>
-                                    <label htmlFor="location" className="block text-sm font-medium text-gray-900">Location</label>
-                                    <input id="location" name="location" value={eventForm.location} onChange={handleEventFormChange} placeholder="e.g., Central Park" className="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-orange-600" required />
-                                 </div>
-                                 <div>
-                                    <label htmlFor="category" className="block text-sm font-medium text-gray-900">Category</label>
-                                    <input id="category" name="category" value={eventForm.category} onChange={handleEventFormChange} placeholder="e.g., Music, Workshop, Comedy" className="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-orange-600" required />
-                                 </div>
-                                 <div className="pt-4 flex justify-end gap-4">
-                                    <button type="button" onClick={() => setShowEventForm(false)} className="px-6 py-2 text-sm font-semibold text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
-                                    <button type="submit" className="px-6 py-2 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-lg shadow-sm">{editingEvent ? 'Update Event' : 'Create Event'}</button>
-                                 </div>
-                            </form>
+                                    <div className="pt-4 flex justify-end"><button type="submit" className="px-6 py-2 bg-orange-500 text-white font-semibold rounded-md hover:bg-orange-600">Save Product</button></div>
+                                </form>
+                            )}
                         </div>
                     </div>
                 )}
-                {showProductForm && (
-                     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowProductForm(false)}>
-                        <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-                           <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                                <h2 className="text-2xl font-bold text-gray-900">{editingProduct ? 'Edit Product' : 'Add a New Product'}</h2>
-                                <button onClick={() => setShowProductForm(false)} className="text-gray-400 hover:text-gray-600"><XIcon /></button>
-                           </div>
-                            <form onSubmit={handleProductSubmit} className="p-6 space-y-6 overflow-y-auto">
-                                <div>
-                                    <label htmlFor="product-image-upload" className="block text-sm font-medium leading-6 text-gray-900">Product Image</label>
-                                    <div className="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
-                                        {productImagePreview ? (
-                                             <div className="text-center">
-                                                <img src={productImagePreview} alt="Product preview" className="mx-auto h-32 w-auto object-cover rounded-md" />
-                                                <label htmlFor="product-image-upload" className="relative cursor-pointer mt-4 rounded-md bg-white font-semibold text-orange-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-600 focus-within:ring-offset-2 hover:text-orange-500">
-                                                    <span>Change image</span>
-                                                    <input id="product-image-upload" name="product-image" type="file" className="sr-only" accept="image/*" onChange={handleProductImageChange} />
-                                                </label>
-                                            </div>
-                                        ) : (
-                                            <div className="text-center">
-                                                <svg className="mx-auto h-12 w-12 text-gray-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clipRule="evenodd" /></svg>
-                                                <div className="mt-4 flex text-sm leading-6 text-gray-600">
-                                                    <label htmlFor="product-image-upload" className="relative cursor-pointer rounded-md bg-white font-semibold text-orange-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-600 focus-within:ring-offset-2 hover:text-orange-500">
-                                                        <span>Upload a file</span>
-                                                        <input id="product-image-upload" name="product-image" type="file" className="sr-only" accept="image/*" onChange={handleProductImageChange} />
-                                                    </label>
-                                                    <p className="pl-1">or drag and drop</p>
-                                                </div>
-                                                <p className="text-xs leading-5 text-gray-600">PNG, JPG, GIF up to 10MB</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                                <div>
-                                    <label htmlFor="name" className="block text-sm font-medium text-gray-900">Product Name</label>
-                                    <input id="name" name="name" value={productForm.name} onChange={handleProductFormChange} placeholder="e.g., Handcrafted Terracotta Vase" className="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-orange-600" required />
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    <div>
-                                        <label htmlFor="price" className="block text-sm font-medium text-gray-900">Price (₹)</label>
-                                        <input id="price" name="price" type="number" value={productForm.price} onChange={handleProductFormChange} placeholder="e.g., 500" className="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-orange-600" required />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="category" className="block text-sm font-medium text-gray-900">Category</label>
-                                        <input id="category" name="category" value={productForm.category} onChange={handleProductFormChange} placeholder="e.g., Handicrafts, Food" className="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-orange-600" required />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label htmlFor="description" className="block text-sm font-medium text-gray-900">Description</label>
-                                    <textarea id="description" name="description" value={productForm.description} onChange={handleProductFormChange} placeholder="Describe your product..." className="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-orange-600" rows={4}></textarea>
-                                </div>
-                                <div className="pt-4 flex justify-end gap-4">
-                                    <button type="button" onClick={() => setShowProductForm(false)} className="px-6 py-2 text-sm font-semibold text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
-                                    <button type="submit" className="px-6 py-2 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-lg shadow-sm">{editingProduct ? 'Update Product' : 'Add Product'}</button>
-                                 </div>
-                            </form>
-                        </div>
-                    </div>
-                )}
+                
+                {/* Product Quick View Modal */}
                 {selectedProduct && (
                      <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setSelectedProduct(null)}>
                         <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col md:flex-row" onClick={(e) => e.stopPropagation()}>
-                           <button onClick={() => setSelectedProduct(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10"><XIcon /></button>
-                           <div className="w-full md:w-1/2">
-                             <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full h-full object-cover rounded-l-2xl" />
-                           </div>
-                           <div className="w-full md:w-1/2 p-8 overflow-y-auto">
-                                <h2 className="text-3xl font-bold">{selectedProduct.name}</h2>
-                                <p className="text-gray-500 text-sm mb-4">by {selectedProduct.seller}</p>
-                                <div className="flex items-center mb-4">
-                                    {renderStars(averageRating(selectedProduct.reviews))}
-                                    <span className="text-sm text-gray-500 ml-2">{averageRating(selectedProduct.reviews)} ({selectedProduct.reviews?.length || 0} reviews)</span>
-                                </div>
-                                <p className="text-3xl font-bold text-gray-900 mb-4">₹{selectedProduct.price}</p>
-                                <p className="text-gray-600 mb-6">{selectedProduct.description}</p>
-                                <button onClick={() => handleAddToCart(selectedProduct)} className="w-full py-3 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600">Add to Cart</button>
-                                <div className="mt-8">
-                                    <h3 className="font-bold text-lg mb-4">Reviews</h3>
+                            <div className="w-full md:w-1/2">
+                                <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full h-full object-cover rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none"/>
+                            </div>
+                            <div className="w-full md:w-1/2 flex flex-col">
+                                <div className="p-6 pb-0 flex-grow overflow-y-auto">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <p className="text-sm font-semibold text-orange-600">{selectedProduct.category}</p>
+                                            <h2 className="text-3xl font-bold text-gray-900">{selectedProduct.name}</h2>
+                                            <p className="text-sm text-gray-500 mt-1">Sold by {selectedProduct.seller}</p>
+                                        </div>
+                                        <button onClick={() => setSelectedProduct(null)} className="text-gray-400 hover:text-gray-600"><XIcon /></button>
+                                    </div>
+                                    <p className="text-3xl font-bold text-gray-800 my-4">₹{selectedProduct.price.toFixed(2)}</p>
+                                    <p className="text-gray-600 text-sm leading-relaxed">{selectedProduct.description}</p>
+                                    
+                                    <div className="mt-6">
+                                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Reviews ({selectedProduct.reviews?.length || 0})</h4>
+                                        <div className="space-y-4">
+                                            {selectedProduct.reviews && selectedProduct.reviews.length > 0 ? (
+                                                selectedProduct.reviews.slice(0, 2).map(review => (
+                                                    <div key={review.id} className="bg-gray-50 p-3 rounded-lg">
+                                                        <div className="flex items-center justify-between">
+                                                            <p className="font-semibold text-sm text-gray-800">{review.author}</p>
+                                                            <div className="flex items-center">{[...Array(review.rating)].map((_, i) => <StarIcon key={i} className="h-4 w-4 text-yellow-400"/>)}{[...Array(5 - review.rating)].map((_, i) => <StarIcon key={i} className="h-4 w-4 text-gray-300"/>)}</div>
+                                                        </div>
+                                                        <p className="text-sm text-gray-700 mt-1">{review.comment}</p>
+                                                    </div>
+                                                ))
+                                            ) : <p className="text-sm text-gray-500">No reviews yet.</p>}
+                                        </div>
+                                    </div>
+                                    
                                     {user && (
-                                        <form onSubmit={handleReviewSubmit} className="mb-6 p-4 bg-gray-50 rounded-lg">
-                                            <h4 className="font-semibold mb-2">Leave a review</h4>
-                                            <div className="mb-2">{renderStars(newReviewRating, setNewReviewRating)}</div>
-                                            <textarea value={newReviewComment} onChange={e => setNewReviewComment(e.target.value)} placeholder="Your comment..." className="w-full p-2 border rounded mb-2" required></textarea>
-                                            <button type="submit" className="px-4 py-2 bg-orange-500 text-white text-sm rounded-md">Submit</button>
+                                        <form onSubmit={handleReviewSubmit} className="mt-6 bg-gray-50 p-4 rounded-lg">
+                                            <h5 className="font-semibold text-gray-800 mb-2">Leave a Review</h5>
+                                            <div className="flex items-center mb-2">
+                                                {[1,2,3,4,5].map(star => <button key={star} type="button" onClick={() => setNewReviewRating(star)}><StarIcon className={`h-6 w-6 ${newReviewRating >= star ? 'text-yellow-400' : 'text-gray-300 hover:text-yellow-300'}`}/></button>)}
+                                            </div>
+                                            <textarea value={newReviewComment} onChange={e => setNewReviewComment(e.target.value)} rows={2} placeholder="Share your thoughts..." className="w-full p-2 text-sm text-gray-700 bg-white rounded-md border border-gray-200 focus:border-orange-500 focus:ring-orange-500 focus:outline-none transition-colors"></textarea>
+                                            <button type="submit" disabled={!newReviewRating || !newReviewComment} className="mt-2 w-full text-center py-2 px-4 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 rounded-md">Submit Review</button>
                                         </form>
                                     )}
-                                    <div className="space-y-4 max-h-60 overflow-y-auto">
-                                        {selectedProduct.reviews && selectedProduct.reviews.length > 0 ? selectedProduct.reviews.map(review => (
-                                            <div key={review.id} className="border-b pb-2">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="font-semibold">{review.author}</span>
-                                                    {renderStars(review.rating)}
-                                                </div>
-                                                <p className="text-sm text-gray-600 mt-1">{review.comment}</p>
-                                            </div>
-                                        )) : <p className="text-sm text-gray-500">No reviews yet.</p>}
-                                    </div>
                                 </div>
-                           </div>
+                                <div className="p-6 mt-auto border-t">
+                                    <button onClick={() => {handleAddToCart(selectedProduct); setSelectedProduct(null);}} className="w-full py-3 px-4 bg-orange-500 text-white font-semibold rounded-lg shadow-sm hover:bg-orange-600">Add to Cart</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
 
-                {shareStatus && <div className="fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm">{shareStatus}</div>}
-                {cartStatus && <div className="fixed bottom-16 right-5 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm">{cartStatus}</div>}
+
             </div>
+            {shareStatus && <div className="fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm">{shareStatus}</div>}
+            {cartStatus && <div className="fixed bottom-5 left-5 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm animate-fade-in-up">{cartStatus}</div>}
         </section>
     );
 };

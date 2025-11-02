@@ -77,10 +77,10 @@
       },
     };
 
-    const getChatSession = (isThinkingMode: boolean, location: Location | null): Chat => {
-      const modelName = isThinkingMode ? "gemini-2.5-pro" : "gemini-2.5-flash-lite";
+    const getChatSession = (location: Location | null): Chat => {
+      const modelName = "gemini-2.5-pro";
       const locationKey = location ? 'with-location' : 'no-location';
-      const toolsKey = 'with-events-services-products-tool'; // A key to represent the tool configuration
+      const toolsKey = 'with-events-services-products-tool';
       const newConfigKey = `${modelName}-${locationKey}-${toolsKey}`;
 
       if (chat && currentConfigKey === newConfigKey) {
@@ -93,15 +93,6 @@
         tools: [{ functionDeclarations: [findLocalEventsTool, findLocalServicesTool, findLocalProductsTool] }],
       };
       
-      const generationConfig: any = {};
-      if (isThinkingMode) {
-        generationConfig.thinkingConfig = { thinkingBudget: 32768 };
-      }
-      
-      if (Object.keys(generationConfig).length > 0) {
-        chatRequest.config = generationConfig;
-      }
-
       if (location) {
         chatRequest.tools.push({googleMaps: {}});
         chatRequest.toolConfig = {
@@ -187,11 +178,10 @@
         allEvents: LocalEvent[], 
         allServices: ServiceListing[], 
         allProducts: Product[], 
-        isThinkingMode: boolean = false, 
         location: Location | null = null
     ): AsyncGenerator<{ text: string; groundingChunks?: any[] }> {
         try {
-            const chatSession = getChatSession(isThinkingMode, location);
+            const chatSession = getChatSession(location);
             
             const initialStream = await chatSession.sendMessageStream({ message: prompt });
     

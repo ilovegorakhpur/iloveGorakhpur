@@ -13,12 +13,45 @@ declare global {
   }
 }
 
+const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
+  // In a real app, use a library like 'marked' or 'react-markdown' for security and features.
+  const createMarkup = (markdown: string) => {
+    let html = markdown
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      // Bold **text**
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      // Process line by line for lists
+      .split('\n')
+      .map(line => {
+        if (line.trim().startsWith('* ')) {
+          return `<li>${line.trim().substring(2)}</li>`;
+        }
+        return line;
+      })
+      .join('\n');
+    
+    // Wrap consecutive list items in <ul>
+    html = html.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>').replace(/<\/ul>\n<ul>/g, '');
+
+    // Replace newlines with <br> for non-list items
+    html = html.replace(/\n/g, '<br />');
+    html = html.replace(/<br \/><ul>/g, '<ul>'); // clean up breaks before lists
+    html = html.replace(/<\/ul><br \/>/g, '</ul>'); // clean up breaks after lists
+
+
+    return { __html: html };
+  };
+
+  return <div dangerouslySetInnerHTML={createMarkup(text)} />;
+};
+
+
 const AIAssistant: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showThinking, setShowThinking] = useState(false);
-  const [isThinkingMode, setIsThinkingMode] = useState(false);
   const [location, setLocation] = useState<Location | null>(null);
   const [isLocationEnabled, setIsLocationEnabled] = useState(false);
   const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -73,7 +106,7 @@ const AIAssistant: React.FC = () => {
 
     let firstChunk = true;
     try {
-      const stream = askGorakhpurGuideStream(message, events, services, products, isThinkingMode, location);
+      const stream = askGorakhpurGuideStream(message, events, services, products, location);
       
       let fullResponse = "";
       let groundingChunks: any[] | undefined;
@@ -121,11 +154,6 @@ const AIAssistant: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     sendMessage(query);
-  };
-
-  const handleThinkingModeToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setIsThinkingMode(e.target.checked);
-    setMessages([]); // Clear history as the backend chat session will reset
   };
 
   const handleLocationToggle = () => {
@@ -185,7 +213,13 @@ const AIAssistant: React.FC = () => {
               : 'bg-gray-100 text-gray-800 rounded-bl-none'
           }`}
         >
-          <p className="whitespace-pre-wrap text-sm sm:text-base">{message.content}</p>
+           {isUser ? (
+             <p className="whitespace-pre-wrap text-sm sm:text-base">{message.content}</p>
+           ) : (
+            <div className="text-sm sm:text-base prose prose-sm max-w-none">
+              <MarkdownRenderer text={message.content} />
+            </div>
+           )}
           {message.groundingChunks && message.groundingChunks.length > 0 && (
             <div className="mt-3 pt-3 border-t border-gray-200">
               <h4 className="text-xs font-semibold text-gray-500 mb-2">Sources from Google Maps:</h4>
@@ -267,9 +301,6 @@ const AIAssistant: React.FC = () => {
               <div className="flex justify-start animate-fade-in-up">
                 <div className="max-w-md lg:max-w-2xl px-4 py-3 rounded-2xl bg-gray-100 text-gray-800 rounded-bl-none shadow-sm">
                   <div className="flex items-center space-x-2">
-                    {isThinkingMode && (
-                        <span className="text-sm sm:text-base font-medium text-gray-600">Thinking deeply...</span>
-                    )}
                     <div className="flex space-x-1">
                       <span className="h-2 w-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
                       <span className="h-2 w-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
@@ -283,20 +314,8 @@ const AIAssistant: React.FC = () => {
           </div>
 
           <div className="p-4 sm:p-6 border-t border-gray-200 bg-gray-100/50 rounded-b-2xl">
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <label htmlFor="thinking-toggle" className="flex items-center cursor-pointer select-none">
-                <div className="relative">
-                  <input type="checkbox" id="thinking-toggle" className="sr-only" checked={isThinkingMode} onChange={handleThinkingModeToggle} />
-                  <div className={`block w-14 h-8 rounded-full transition-colors ${isThinkingMode ? 'bg-orange-500' : 'bg-gray-300'}`}></div>
-                  <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full shadow-sm transition-transform ${isThinkingMode ? 'translate-x-full' : ''}`}></div>
-                </div>
-                <div className="ml-3 text-gray-700">
-                  <span className="font-semibold text-sm">Thinking Mode</span>
-                  <p className="text-xs text-gray-500">For complex queries.</p>
-                </div>
-              </label>
-
-              <label htmlFor="location-toggle" className="flex items-center cursor-pointer select-none">
+            <div className="flex items-center justify-center mb-4">
+               <label htmlFor="location-toggle" className="flex items-center cursor-pointer select-none">
                 <div className="relative">
                   <input type="checkbox" id="location-toggle" className="sr-only" checked={isLocationEnabled} onChange={handleLocationToggle} />
                   <div className={`block w-14 h-8 rounded-full transition-colors ${isLocationEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
