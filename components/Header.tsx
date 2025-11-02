@@ -37,7 +37,7 @@ const Header: React.FC<HeaderProps> = ({ onShowLegal }) => {
     { href: '#ai-assistant', label: 'AI Assistant' },
   ];
   
-  const mainNavLinks = navLinks.filter(link => ['#marketplace', '#community', '#ai-assistant', '#map-view'].includes(link.href));
+  const mainNavLinks = navLinks.filter(link => ['#marketplace', '#community'].includes(link.href));
   const moreNavLinks = navLinks.filter(link => !mainNavLinks.find(main => main.href === link.href));
 
   // Effect to close menus on outside click
